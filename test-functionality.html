@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Funcionalidad - TaskQuest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Funcionalidad - TaskQuest</h1>
+    
+    <div class="test-section">
+        <h2>1. Verificación de Archivos</h2>
+        <div id="file-tests"></div>
+        <button onclick="testFiles()">Probar Archivos</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Verificación de Elementos DOM</h2>
+        <div id="dom-tests"></div>
+        <button onclick="testDOM()">Probar DOM</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Verificación de Funciones JavaScript</h2>
+        <div id="js-tests"></div>
+        <button onclick="testJavaScript()">Probar JavaScript</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Verificación de Funcionalidad Completa</h2>
+        <div id="functionality-tests"></div>
+        <button onclick="testFunctionality()">Probar Funcionalidad</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Test de Rendimiento</h2>
+        <div id="performance-tests"></div>
+        <button onclick="testPerformance()">Probar Rendimiento</button>
+    </div>
+
+    <script>
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        async function testFiles() {
+            clearResults('file-tests');
+            addResult('file-tests', '🔍 Probando archivos...', 'info');
+            
+            const files = [
+                '/css/style.css',
+                '/js/app.js',
+                '/js/daily-system.js',
+                '/js/debug.js'
+            ];
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        addResult('file-tests', `✅ ${file} - OK`, 'success');
+                    } else {
+                        addResult('file-tests', `❌ ${file} - Error ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    addResult('file-tests', `❌ ${file} - Error de red: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function testDOM() {
+            clearResults('dom-tests');
+            addResult('dom-tests', '🔍 Probando elementos DOM...', 'info');
+            
+            const requiredElements = [
+                'streak', 'score', 'level', 'performanceGrade',
+                'levelProgress', 'currentPoints', 'nextLevelPoints',
+                'motivationText', 'achievements',
+                'startBtn', 'pauseBtn', 'resetBtn',
+                'timerDisplay', 'timerLabel', 'timerPercentage',
+                'todayTasks', 'todayPomodoros', 'todayFocusTime', 'todayEfficiency'
+            ];
+            
+            let found = 0;
+            let missing = 0;
+            
+            requiredElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    addResult('dom-tests', `✅ ${id} - Encontrado`, 'success');
+                    found++;
+                } else {
+                    addResult('dom-tests', `❌ ${id} - No encontrado`, 'error');
+                    missing++;
+                }
+            });
+            
+            addResult('dom-tests', `📊 Resumen: ${found} encontrados, ${missing} faltantes`, 'info');
+        }
+
+        function testJavaScript() {
+            clearResults('js-tests');
+            addResult('js-tests', '🔍 Probando funciones JavaScript...', 'info');
+            
+            const requiredFunctions = [
+                'showAddTaskModal', 'closeAddTaskModal', 'closeCelebration',
+                'takeBreak', 'logRest', 'showStatsTab', 'scrollToSection',
+                'updateActiveNavigation', 'initScrollSpy', 'showTaskSelector',
+                'closeTaskSelector', 'clearActiveTask', 'restartFromLastIncomplete'
+            ];
+            
+            let found = 0;
+            let missing = 0;
+            
+            requiredFunctions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    addResult('js-tests', `✅ ${funcName} - Disponible`, 'success');
+                    found++;
+                } else {
+                    addResult('js-tests', `❌ ${funcName} - No disponible`, 'error');
+                    missing++;
+                }
+            });
+            
+            // Verificar clase principal
+            if (typeof TaskQuestGame === 'function') {
+                addResult('js-tests', `✅ TaskQuestGame - Clase disponible`, 'success');
+                found++;
+            } else {
+                addResult('js-tests', `❌ TaskQuestGame - Clase no disponible`, 'error');
+                missing++;
+            }
+            
+            // Verificar DailySystem
+            if (typeof DailySystem === 'function') {
+                addResult('js-tests', `✅ DailySystem - Clase disponible`, 'success');
+                found++;
+            } else {
+                addResult('js-tests', `❌ DailySystem - Clase no disponible`, 'error');
+                missing++;
+            }
+            
+            addResult('js-tests', `📊 Resumen: ${found} funciones/clases disponibles, ${missing} faltantes`, 'info');
+        }
+
+        function testFunctionality() {
+            clearResults('functionality-tests');
+            addResult('functionality-tests', '🔍 Probando funcionalidad completa...', 'info');
+            
+            // Verificar si el juego está inicializado
+            if (window.game) {
+                addResult('functionality-tests', `✅ Game - Instancia disponible`, 'success');
+                
+                // Verificar datos
+                if (window.game.data) {
+                    addResult('functionality-tests', `✅ Game Data - Datos cargados`, 'success');
+                    
+                    // Verificar categorías
+                    const categories = ['comunicacion', 'estudiar', 'proyectos', 'personal'];
+                    let categoriesOk = true;
+                    categories.forEach(cat => {
+                        if (!window.game.data.tasks[cat]) {
+                            categoriesOk = false;
+                        }
+                    });
+                    
+                    if (categoriesOk) {
+                        addResult('functionality-tests', `✅ Categorías - Todas las categorías disponibles`, 'success');
+                    } else {
+                        addResult('functionality-tests', `❌ Categorías - Algunas categorías faltantes`, 'error');
+                    }
+                    
+                    // Verificar sistema de pomodoro
+                    if (window.game.data.pomodoro) {
+                        addResult('functionality-tests', `✅ Pomodoro - Sistema disponible`, 'success');
+                    } else {
+                        addResult('functionality-tests', `❌ Pomodoro - Sistema no disponible`, 'error');
+                    }
+                    
+                } else {
+                    addResult('functionality-tests', `❌ Game Data - Datos no cargados`, 'error');
+                }
+                
+            } else {
+                addResult('functionality-tests', `❌ Game - Instancia no disponible`, 'error');
+            }
+            
+            // Verificar localStorage
+            try {
+                const data = localStorage.getItem('taskQuestData');
+                if (data) {
+                    addResult('functionality-tests', `✅ LocalStorage - Datos guardados`, 'success');
+                } else {
+                    addResult('functionality-tests', `ℹ️ LocalStorage - Sin datos (primera vez)`, 'info');
+                }
+            } catch (error) {
+                addResult('functionality-tests', `❌ LocalStorage - Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testPerformance() {
+            clearResults('performance-tests');
+            addResult('performance-tests', '🔍 Probando rendimiento...', 'info');
+            
+            const startTime = performance.now();
+            
+            // Test de rendimiento de DOM
+            const domStart = performance.now();
+            for (let i = 0; i < 1000; i++) {
+                document.getElementById('streak');
+            }
+            const domEnd = performance.now();
+            const domTime = domEnd - domStart;
+            
+            addResult('performance-tests', `⏱️ DOM Query (1000x): ${domTime.toFixed(2)}ms`, 'info');
+            
+            // Test de rendimiento de localStorage
+            const storageStart = performance.now();
+            for (let i = 0; i < 100; i++) {
+                localStorage.getItem('taskQuestData');
+            }
+            const storageEnd = performance.now();
+            const storageTime = storageEnd - storageStart;
+            
+            addResult('performance-tests', `⏱️ LocalStorage (100x): ${storageTime.toFixed(2)}ms`, 'info');
+            
+            const endTime = performance.now();
+            const totalTime = endTime - startTime;
+            
+            addResult('performance-tests', `⏱️ Tiempo total: ${totalTime.toFixed(2)}ms`, 'info');
+            
+            // Verificar memoria
+            if (performance.memory) {
+                const memory = performance.memory;
+                addResult('performance-tests', `🧠 Memoria usada: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB`, 'info');
+                addResult('performance-tests', `🧠 Memoria total: ${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)}MB`, 'info');
+            }
+        }
+
+        // Auto-ejecutar tests básicos al cargar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testDOM();
+                testJavaScript();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

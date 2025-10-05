@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Header con estadísticas -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🎮</span>
+                <h1>TaskQuest</h1>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-icon">🔥</span>
+                    <div>
+                        <div class="stat-value" id="streak">0</div>
+                        <div class="stat-label">Racha</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">⭐</span>
+                    <div>
+                        <div class="stat-value" id="points">0</div>
+                        <div class="stat-label">Puntos</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🏆</span>
+                    <div>
+                        <div class="stat-value" id="level">1</div>
+                        <div class="stat-label">Nivel</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">📊</span>
+                    <div>
+                        <div class="stat-value performance-grade" id="performanceGrade">B</div>
+                        <div class="stat-label">Rendimiento</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rest Alert System integrado en header -->
+            <div class="rest-alert-compact">
+                <div class="rest-alert-header">
+                    <div class="rest-icon-container">
+                        <span class="rest-icon" id="restIcon">😴</span>
+                        <div class="rest-pulse" id="restPulse"></div>
+                    </div>
+                    <div class="rest-info">
+                        <span class="rest-status" id="restStatus">Bueno</span>
+                        <span class="rest-time" id="restTime">Último descanso: hace 2h</span>
+                    </div>
+                </div>
+                <div class="rest-thermometer-compact">
+                    <div class="thermometer-track-compact">
+                        <div class="thermometer-fill" id="restThermometerFill"></div>
+                        <div class="thermometer-glow" id="restThermometerGlow"></div>
+                    </div>
+                    <div class="thermometer-labels-compact">
+                        <span class="thermometer-label-compact">Agotado</span>
+                        <span class="thermometer-label-compact">Excelente</span>
+                    </div>
+                </div>
+                <div class="rest-actions-compact">
+                    <button class="rest-btn-compact primary" id="takeBreakBtn" onclick="takeBreak()" title="Tomar Descanso">
+                        <span class="btn-icon">☕</span>
+                        <span class="btn-text">Descansar</span>
+                    </button>
+                    <button class="rest-btn-compact secondary" id="logRestBtn" onclick="logRest()" title="Registrar Descanso">
+                        <span class="btn-icon">📝</span>
+                        <span class="btn-text">Registrar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de progreso de nivel -->
+        <div class="level-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="levelProgress"></div>
+            </div>
+            <p class="progress-text"><span id="currentPoints">0</span> / <span id="nextLevelPoints">100</span> XP</p>
+        </div>
+
+        <!-- Mensaje motivacional -->
+        <div class="motivation-banner" id="motivationBanner">
+            <span class="motivation-icon">💪</span>
+            <p id="motivationText">¡Completa tu primera tarea del día!</p>
+        </div>
+
+        <!-- Navegación de secciones -->
+        <nav class="section-nav">
+            <button class="nav-btn active" onclick="scrollToSection('categories')" data-section="categories">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Tareas</span>
+            </button>
+            <button class="nav-btn" onclick="scrollToSection('block-time')" data-section="block-time">
+                <span class="nav-icon">⏰</span>
+                <span class="nav-text">Block Time</span>
+            </button>
+            <button class="nav-btn" onclick="scrollToSection('daily-stats')" data-section="daily-stats">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Estadísticas</span>
+            </button>
+            <button class="nav-btn" onclick="scrollToSection('goals')" data-section="goals">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-text">Metas</span>
+            </button>
+            <button class="nav-btn" onclick="scrollToSection('history')" data-section="history">
+                <span class="nav-icon">📈</span>
+                <span class="nav-text">Historial</span>
+            </button>
+        </nav>
+
+        <!-- Categorías de tareas -->
+        <div class="categories" id="categories">
+            <div class="category" data-category="comunicacion">
+                <div class="category-header">
+                    <span class="category-icon">💬</span>
+                    <h2>Comunicación</h2>
+                    <span class="category-progress" id="progress-comunicacion">0/3</span>
+                </div>
+                <p class="category-description">Conecta con las personas importantes</p>
+                <div class="tasks" id="tasks-comunicacion"></div>
+                <button class="add-task-btn" onclick="showAddTaskModal('comunicacion')">+ Añadir tarea</button>
+            </div>
+
+            <div class="category" data-category="estudiar">
+                <div class="category-header">
+                    <span class="category-icon">📚</span>
+                    <h2>Estudiar</h2>
+                    <span class="category-progress" id="progress-estudiar">0/3</span>
+                </div>
+                <p class="category-description">Expande tus conocimientos</p>
+                <div class="tasks" id="tasks-estudiar"></div>
+                <button class="add-task-btn" onclick="showAddTaskModal('estudiar')">+ Añadir tarea</button>
+            </div>
+
+            <div class="category" data-category="proyectos">
+                <div class="category-header">
+                    <span class="category-icon">🚀</span>
+                    <h2>Proyectos</h2>
+                    <span class="category-progress" id="progress-proyectos">0/3</span>
+                </div>
+                <p class="category-description">Crea y produce tus ideas</p>
+                <div class="tasks" id="tasks-proyectos"></div>
+                <button class="add-task-btn" onclick="showAddTaskModal('proyectos')">+ Añadir tarea</button>
+            </div>
+
+            <div class="category" data-category="personal">
+                <div class="category-header">
+                    <span class="category-icon">💪</span>
+                    <h2>Tareas Personales</h2>
+                    <span class="category-progress" id="progress-personal">0/3</span>
+                </div>
+                <p class="category-description">Cuida de ti mismo</p>
+                <div class="tasks" id="tasks-personal"></div>
+                <button class="add-task-btn" onclick="showAddTaskModal('personal')">+ Añadir tarea</button>
+            </div>
+        </div>
+
+        <!-- Block Time - Pomodoro -->
+        <div class="block-time-section" id="block-time">
+            <div class="block-time-header">
+                <h2>⏰ Block Time</h2>
+                <p>Usa la técnica Pomodoro para mantener el enfoque</p>
+            </div>
+            
+            <!-- Tarea Activa -->
+            <div class="active-task-section">
+                <h3>🎯 Tarea Activa</h3>
+                <div class="active-task-container" id="activeTaskContainer">
+                    <div class="no-active-task" id="noActiveTask">
+                        <span class="task-icon">📝</span>
+                        <p>Selecciona una tarea para enfocarte durante el Block Time</p>
+                        <button class="select-task-btn" onclick="showTaskSelector()">Seleccionar Tarea</button>
+                    </div>
+                    <div class="active-task-display" id="activeTaskDisplay" style="display: none;">
+                        <div class="active-task-info">
+                            <span class="active-task-category" id="activeTaskCategory">💬</span>
+                            <div class="active-task-details">
+                                <div class="active-task-name" id="activeTaskName">Nombre de la tarea</div>
+                                <div class="active-task-points" id="activeTaskPoints">10 XP</div>
+                                <div class="pomodoro-status" id="pomodoroStatus">⏰ Completa un pomodoro para finalizar</div>
+                            </div>
+                        </div>
+                        <div class="active-task-actions">
+                            <button class="change-task-btn" onclick="showTaskSelector()">Cambiar</button>
+                            <button class="restart-btn" onclick="restartFromLastIncomplete()" id="restartBtn" style="display: none;">🔄 Reiniciar</button>
+                            <button class="clear-task-btn" onclick="clearActiveTask()">Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pomodoro-container">
+                <div class="timer-display">
+                    <div class="timer-container">
+                        <div class="timer-progress">
+                            <svg class="progress-ring-svg" width="240" height="240">
+                                <circle class="progress-ring-circle" cx="120" cy="120" r="110" fill="transparent" stroke="#e2e8f0" stroke-width="12"/>
+                                <circle class="progress-ring-fill" cx="120" cy="120" r="110" fill="transparent" stroke="#6c63ff" stroke-width="12" stroke-linecap="round"/>
+                                <circle class="progress-ring-glow" cx="120" cy="120" r="110" fill="transparent" stroke="#6c63ff" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+                            </svg>
+                        </div>
+                        <div class="timer-circle">
+                            <div class="timer-time" id="timerDisplay">25:00</div>
+                            <div class="timer-label" id="timerLabel">Trabajo</div>
+                            <div class="timer-percentage" id="timerPercentage">0%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="timer-controls">
+                    <button class="timer-btn start-btn" id="startBtn">▶️ Iniciar</button>
+                    <button class="timer-btn pause-btn" id="pauseBtn" style="display: none;">⏸️ Pausar</button>
+                    <button class="timer-btn reset-btn" id="resetBtn">🔄 Reiniciar</button>
+                </div>
+                
+                <div class="pomodoro-stats">
+                    <div class="stat-box">
+                        <span class="stat-icon">🍅</span>
+                        <div class="stat-info">
+                            <div class="stat-value" id="pomodorosToday">0</div>
+                            <div class="stat-label">Pomodoros Hoy</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-icon">⏱️</span>
+                        <div class="stat-info">
+                            <div class="stat-value" id="focusTime">0h</div>
+                            <div class="stat-label">Tiempo Enfocado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pomodoro-settings">
+                <h3>⚙️ Configuración</h3>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="workDuration">Tiempo de Trabajo (min):</label>
+                        <select id="workDuration">
+                            <option value="15">15 min</option>
+                            <option value="25" selected>25 min</option>
+                            <option value="30">30 min</option>
+                            <option value="45">45 min</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="breakDuration">Descanso Corto (min):</label>
+                        <select id="breakDuration">
+                            <option value="3">3 min</option>
+                            <option value="5" selected>5 min</option>
+                            <option value="10">10 min</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="longBreakDuration">Descanso Largo (min):</label>
+                        <select id="longBreakDuration">
+                            <option value="15" selected>15 min</option>
+                            <option value="20">20 min</option>
+                            <option value="30">30 min</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="pomodorosUntilLongBreak">Pomodoros hasta descanso largo:</label>
+                        <select id="pomodorosUntilLongBreak">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4" selected>4</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas Diarias -->
+        <div class="daily-stats-section" id="daily-stats">
+            <h2>📊 Estadísticas de Hoy</h2>
+            <div class="daily-stats-grid">
+                <div class="daily-stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="todayTasks">0</div>
+                        <div class="stat-label">Tareas Completadas</div>
+                        <div class="stat-progress">
+                            <div class="progress-bar-small">
+                                <div class="progress-fill-small" id="tasksProgress"></div>
+                            </div>
+                            <span class="progress-text-small" id="tasksProgressText">0/5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="daily-stat-card">
+                    <div class="stat-icon">🍅</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="todayPomodoros">0</div>
+                        <div class="stat-label">Pomodoros</div>
+                        <div class="stat-progress">
+                            <div class="progress-bar-small">
+                                <div class="progress-fill-small" id="pomodorosProgress"></div>
+                            </div>
+                            <span class="progress-text-small" id="pomodorosProgressText">0/4</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="daily-stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="todayFocusTime">0m</div>
+                        <div class="stat-label">Tiempo Enfocado</div>
+                        <div class="stat-progress">
+                            <div class="progress-bar-small">
+                                <div class="progress-fill-small" id="focusProgress"></div>
+                            </div>
+                            <span class="progress-text-small" id="focusProgressText">0/120m</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="daily-stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="todayEfficiency">0%</div>
+                        <div class="stat-label">Eficiencia</div>
+                        <div class="stat-progress">
+                            <div class="progress-bar-small">
+                                <div class="progress-fill-small" id="efficiencyProgress"></div>
+                            </div>
+                            <span class="progress-text-small" id="efficiencyProgressText">0/100%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuración de Metas -->
+        <div class="goals-config-section" id="goals">
+            <h2>🎯 Configuración de Metas Diarias</h2>
+            <div class="goals-config-grid">
+                <div class="goal-config-card">
+                    <div class="goal-header">
+                        <span class="goal-icon">✅</span>
+                        <h3>Metas de Tareas</h3>
+                    </div>
+                    <div class="goal-settings">
+                        <div class="setting-item">
+                            <label for="taskGoal">Meta diaria de tareas:</label>
+                            <input type="number" id="taskGoal" min="1" max="20" value="5">
+                        </div>
+                        <div class="goal-achievements">
+                            <div class="achievement-badge" id="taskAchievement">
+                                <span class="achievement-icon">🎯</span>
+                                <span class="achievement-text">Meta: 5 tareas</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="goal-config-card">
+                    <div class="goal-header">
+                        <span class="goal-icon">🍅</span>
+                        <h3>Metas de Pomodoros</h3>
+                    </div>
+                    <div class="goal-settings">
+                        <div class="setting-item">
+                            <label for="pomodoroGoal">Meta diaria de pomodoros:</label>
+                            <input type="number" id="pomodoroGoal" min="1" max="20" value="4">
+                        </div>
+                        <div class="goal-achievements">
+                            <div class="achievement-badge" id="pomodoroAchievement">
+                                <span class="achievement-icon">🎯</span>
+                                <span class="achievement-text">Meta: 4 pomodoros</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="goal-config-card">
+                    <div class="goal-header">
+                        <span class="goal-icon">⏱️</span>
+                        <h3>Metas de Tiempo</h3>
+                    </div>
+                    <div class="goal-settings">
+                        <div class="setting-item">
+                            <label for="timeGoal">Meta diaria de tiempo (minutos):</label>
+                            <input type="number" id="timeGoal" min="15" max="480" value="120">
+                        </div>
+                        <div class="goal-achievements">
+                            <div class="achievement-badge" id="timeAchievement">
+                                <span class="achievement-icon">🎯</span>
+                                <span class="achievement-text">Meta: 120 minutos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="goals-summary">
+                <h3>🏆 Resumen de Logros de Hoy</h3>
+                <div class="achievements-grid">
+                    <div class="achievement-item" id="taskMultiplier">
+                        <span class="achievement-icon">✅</span>
+                        <span class="achievement-label">Tareas</span>
+                        <span class="achievement-value">0x</span>
+                    </div>
+                    <div class="achievement-item" id="pomodoroMultiplier">
+                        <span class="achievement-icon">🍅</span>
+                        <span class="achievement-label">Pomodoros</span>
+                        <span class="achievement-value">0x</span>
+                    </div>
+                    <div class="achievement-item" id="timeMultiplier">
+                        <span class="achievement-icon">⏱️</span>
+                        <span class="achievement-label">Tiempo</span>
+                        <span class="achievement-value">0x</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas Históricas -->
+        <div class="stats-history-section" id="history">
+            <h2>📊 Estadísticas Históricas</h2>
+            <div class="stats-tabs">
+                <button class="tab-btn active" onclick="showStatsTab('week')">Semana</button>
+                <button class="tab-btn" onclick="showStatsTab('month')">Mes</button>
+            </div>
+            <div class="stats-content">
+                <div class="stats-tab" id="weekStats">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-icon">✅</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="weekTasks">0</div>
+                                <div class="stat-label">Tareas Esta Semana</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">🍅</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="weekPomodoros">0</div>
+                                <div class="stat-label">Pomodoros Esta Semana</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">⏱️</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="weekFocusTime">0h</div>
+                                <div class="stat-label">Tiempo Enfocado</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">📈</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="weekAverage">0</div>
+                                <div class="stat-label">Promedio Diario</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-tab" id="monthStats" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-icon">✅</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="monthTasks">0</div>
+                                <div class="stat-label">Tareas Este Mes</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">🍅</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="monthPomodoros">0</div>
+                                <div class="stat-label">Pomodoros Este Mes</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">⏱️</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="monthFocusTime">0h</div>
+                                <div class="stat-label">Tiempo Enfocado</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">📈</span>
+                            <div class="stat-info">
+                                <div class="stat-value" id="monthAverage">0</div>
+                                <div class="stat-label">Promedio Diario</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logros recientes -->
+        <div class="achievements-section">
+            <h2>🏆 Logros Desbloqueados</h2>
+            <div class="achievements" id="achievements"></div>
+        </div>
+    </div>
+
+    <!-- Modal para añadir tareas -->
+    <div class="modal" id="addTaskModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddTaskModal()">&times;</span>
+            <h2>➕ Nueva Tarea</h2>
+            <form id="addTaskForm">
+                <input type="hidden" id="taskCategory">
+                <div class="form-group">
+                    <label for="taskName">Nombre de la tarea:</label>
+                    <input type="text" id="taskName" required placeholder="Ej: Llamar a mamá">
+                </div>
+                <div class="form-group">
+                    <label for="taskDifficulty">Dificultad:</label>
+                    <select id="taskDifficulty">
+                        <option value="5">Fácil (5 XP)</option>
+                        <option value="10" selected>Media (10 XP)</option>
+                        <option value="20">Difícil (20 XP)</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Crear Tarea</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de celebración -->
+    <div class="celebration-modal" id="celebrationModal">
+        <div class="celebration-content">
+            <div class="celebration-icon">🎉</div>
+            <h2 id="celebrationTitle">¡Increíble!</h2>
+            <p id="celebrationMessage">¡Has completado una tarea!</p>
+            <div class="points-earned" id="pointsEarned">+10 XP</div>
+            <button class="celebration-btn" onclick="closeCelebration()">¡Continuar!</button>
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar tarea activa -->
+    <div class="modal" id="taskSelectorModal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTaskSelector()">&times;</span>
+            <h2>🎯 Seleccionar Tarea Activa</h2>
+            <p>Elige una tarea para enfocarte durante el Block Time</p>
+            
+            <div class="task-selector-categories">
+                <div class="task-category-section" data-category="comunicacion">
+                    <h3>💬 Comunicación</h3>
+                    <div class="task-list" id="selector-tasks-comunicacion"></div>
+                </div>
+                
+                <div class="task-category-section" data-category="estudiar">
+                    <h3>📚 Estudiar</h3>
+                    <div class="task-list" id="selector-tasks-estudiar"></div>
+                </div>
+                
+                <div class="task-category-section" data-category="proyectos">
+                    <h3>🚀 Proyectos</h3>
+                    <div class="task-list" id="selector-tasks-proyectos"></div>
+                </div>
+                
+                <div class="task-category-section" data-category="personal">
+                    <h3>💪 Personal</h3>
+                    <div class="task-list" id="selector-tasks-personal"></div>
+                </div>
+            </div>
+            
+            <div class="no-tasks-message" id="noTasksMessage" style="display: none;">
+                <span class="no-tasks-icon">📝</span>
+                <p>No tienes tareas pendientes. ¡Añade algunas tareas primero!</p>
+                <button class="add-tasks-btn" onclick="closeTaskSelector(); showAddTaskModal('comunicacion')">Añadir Tareas</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/daily-system.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/debug.js"></script>
+</body>
+</html>

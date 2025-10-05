@@ -1,0 +1,13 @@
+baseURL = "https://lherc.github.io/task-game/"
+languageCode = "es-es"
+title = "TaskQuest - Tu Juego de Tareas"
+theme = "taskquest"
+
+[params]
+  description = "Gamifica tus tareas diarias como en Duolingo"
+  author = "TaskQuest"
+  
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true

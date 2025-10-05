@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Console - TaskQuest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .debug-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .test-button {
+            background: #28a745;
+        }
+        .test-button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Console - TaskQuest</h1>
+    
+    <div class="debug-section">
+        <h2>1. Estado del Juego</h2>
+        <div id="game-status"></div>
+        <button onclick="checkGameStatus()">Verificar Estado del Juego</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>2. Elementos DOM Críticos</h2>
+        <div id="dom-critical"></div>
+        <button onclick="checkCriticalDOM()">Verificar DOM Crítico</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>3. Funciones de Tareas</h2>
+        <div id="task-functions"></div>
+        <button onclick="testTaskFunctions()">Probar Funciones de Tareas</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>4. Funciones de Pomodoro</h2>
+        <div id="pomodoro-functions"></div>
+        <button onclick="testPomodoroFunctions()">Probar Funciones de Pomodoro</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>5. Test de Funcionalidad Completa</h2>
+        <div id="full-test"></div>
+        <button class="test-button" onclick="runFullTest()">Ejecutar Test Completo</button>
+    </div>
+
+    <script>
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `debug-result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        function checkGameStatus() {
+            clearResults('game-status');
+            addResult('game-status', '🔍 Verificando estado del juego...', 'info');
+            
+            // Verificar si el juego está definido
+            if (typeof window.game !== 'undefined') {
+                addResult('game-status', '✅ window.game está definido', 'success');
+                
+                // Verificar propiedades del juego
+                if (window.game.data) {
+                    addResult('game-status', '✅ game.data está disponible', 'success');
+                    addResult('game-status', `📊 Datos: ${JSON.stringify(window.game.data, null, 2)}`, 'info');
+                } else {
+                    addResult('game-status', '❌ game.data no está disponible', 'error');
+                }
+                
+                if (window.game.categories) {
+                    addResult('game-status', `✅ Categorías: ${window.game.categories.join(', ')}`, 'success');
+                } else {
+                    addResult('game-status', '❌ game.categories no está disponible', 'error');
+                }
+                
+            } else {
+                addResult('game-status', '❌ window.game no está definido', 'error');
+            }
+            
+            // Verificar clases
+            if (typeof TaskQuestGame !== 'undefined') {
+                addResult('game-status', '✅ TaskQuestGame está definido', 'success');
+            } else {
+                addResult('game-status', '❌ TaskQuestGame no está definido', 'error');
+            }
+            
+            if (typeof DailySystem !== 'undefined') {
+                addResult('game-status', '✅ DailySystem está definido', 'success');
+            } else {
+                addResult('game-status', '❌ DailySystem no está definido', 'error');
+            }
+        }
+
+        function checkCriticalDOM() {
+            clearResults('dom-critical');
+            addResult('dom-critical', '🔍 Verificando elementos DOM críticos...', 'info');
+            
+            const criticalElements = [
+                'addTaskForm', 'taskCategory', 'taskName', 'taskDifficulty',
+                'startBtn', 'pauseBtn', 'resetBtn', 'timerDisplay',
+                'taskSelectorModal', 'activeTaskDisplay', 'noActiveTask'
+            ];
+            
+            criticalElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    addResult('dom-critical', `✅ ${id} - Encontrado`, 'success');
+                } else {
+                    addResult('dom-critical', `❌ ${id} - NO ENCONTRADO`, 'error');
+                }
+            });
+        }
+
+        function testTaskFunctions() {
+            clearResult('task-functions');
+            addResult('task-functions', '🔍 Probando funciones de tareas...', 'info');
+            
+            // Test agregar tarea
+            try {
+                if (typeof showAddTaskModal === 'function') {
+                    addResult('task-functions', '✅ showAddTaskModal está disponible', 'success');
+                } else {
+                    addResult('task-functions', '❌ showAddTaskModal no está disponible', 'error');
+                }
+                
+                if (window.game && typeof window.game.addTask === 'function') {
+                    addResult('task-functions', '✅ game.addTask está disponible', 'success');
+                } else {
+                    addResult('task-functions', '❌ game.addTask no está disponible', 'error');
+                }
+                
+                if (window.game && typeof window.game.renderTasks === 'function') {
+                    addResult('task-functions', '✅ game.renderTasks está disponible', 'success');
+                } else {
+                    addResult('task-functions', '❌ game.renderTasks no está disponible', 'error');
+                }
+                
+            } catch (error) {
+                addResult('task-functions', `❌ Error en test de tareas: ${error.message}`, 'error');
+            }
+        }
+
+        function testPomodoroFunctions() {
+            clearResults('pomodoro-functions');
+            addResult('pomodoro-functions', '🔍 Probando funciones de pomodoro...', 'info');
+            
+            try {
+                if (window.game && typeof window.game.startPomodoro === 'function') {
+                    addResult('pomodoro-functions', '✅ game.startPomodoro está disponible', 'success');
+                } else {
+                    addResult('pomodoro-functions', '❌ game.startPomodoro no está disponible', 'error');
+                }
+                
+                if (window.game && typeof window.game.pausePomodoro === 'function') {
+                    addResult('pomodoro-functions', '✅ game.pausePomodoro está disponible', 'success');
+                } else {
+                    addResult('pomodoro-functions', '❌ game.pausePomodoro no está disponible', 'error');
+                }
+                
+                if (window.game && typeof window.game.resetPomodoro === 'function') {
+                    addResult('pomodoro-functions', '✅ game.resetPomodoro está disponible', 'success');
+                } else {
+                    addResult('pomodoro-functions', '❌ game.resetPomodoro no está disponible', 'error');
+                }
+                
+            } catch (error) {
+                addResult('pomodoro-functions', `❌ Error en test de pomodoro: ${error.message}`, 'error');
+            }
+        }
+
+        function runFullTest() {
+            clearResults('full-test');
+            addResult('full-test', '🚀 Ejecutando test completo...', 'info');
+            
+            // Test 1: Verificar inicialización
+            if (!window.game) {
+                addResult('full-test', '❌ CRÍTICO: El juego no está inicializado', 'error');
+                return;
+            }
+            
+            addResult('full-test', '✅ Juego inicializado correctamente', 'success');
+            
+            // Test 2: Probar agregar tarea
+            try {
+                // Simular agregar una tarea de prueba
+                const testTask = {
+                    id: Date.now(),
+                    name: 'Tarea de prueba',
+                    points: 10,
+                    completed: false
+                };
+                
+                window.game.data.tasks.comunicacion.push(testTask);
+                window.game.saveData();
+                window.game.renderTasks();
+                
+                addResult('full-test', '✅ Test de agregar tarea: EXITOSO', 'success');
+                
+                // Limpiar tarea de prueba
+                window.game.data.tasks.comunicacion.pop();
+                window.game.saveData();
+                window.game.renderTasks();
+                
+            } catch (error) {
+                addResult('full-test', `❌ Test de agregar tarea: FALLÓ - ${error.message}`, 'error');
+            }
+            
+            // Test 3: Probar pomodoro
+            try {
+                if (window.game.pomodoroState) {
+                    addResult('full-test', '✅ Estado del pomodoro inicializado', 'success');
+                } else {
+                    addResult('full-test', '❌ Estado del pomodoro no inicializado', 'error');
+                }
+            } catch (error) {
+                addResult('full-test', `❌ Test de pomodoro: FALLÓ - ${error.message}`, 'error');
+            }
+            
+            addResult('full-test', '🏁 Test completo finalizado', 'info');
+        }
+
+        // Auto-ejecutar al cargar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkGameStatus();
+                checkCriticalDOM();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

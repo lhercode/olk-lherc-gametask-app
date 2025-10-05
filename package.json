@@ -1,0 +1,20 @@
+{
+  "name": "taskquest",
+  "version": "1.0.0",
+  "description": "Gamifica tus tareas diarias con un sistema inspirado en Duolingo, diseñado para personas con TDAH",
+  "scripts": {
+    "dev": "hugo server -D",
+    "build": "hugo",
+    "clean": "rm -rf public resources"
+  },
+  "keywords": [
+    "hugo",
+    "gamification",
+    "tasks",
+    "adhd",
+    "productivity",
+    "duolingo"
+  ],
+  "author": "TaskQuest",
+  "license": "MIT"
+}

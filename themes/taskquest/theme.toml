@@ -1,0 +1,6 @@
+name = "TaskQuest"
+license = "MIT"
+description = "Tema de gamificación para tareas con TDAH"
+tags = ["gamification", "tasks", "adhd"]
+features = ["responsive", "modern", "interactive"]
+min_version = "0.80.0"
