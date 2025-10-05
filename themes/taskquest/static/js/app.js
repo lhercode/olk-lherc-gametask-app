@@ -108,8 +108,8 @@ class TaskQuestGame {
 
             container.innerHTML = tasks.map(task => `
                 <div class="task ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
-                    <div class="task-checkbox" onclick="window.game.toggleTask('${category}', ${task.id})">
-                        ${task.completed ? '✓' : ''}
+                    <div class="task-status">
+                        ${task.completed ? '✅' : '📝'}
                     </div>
                     <div class="task-name">${task.name}</div>
                     <div class="task-points">${task.points} XP</div>
@@ -1681,6 +1681,60 @@ class TaskQuestGame {
         this.saveData();
         this.updateActiveTaskDisplay();
         this.showNotification('🧹 Tarea activa eliminada', 'info');
+    }
+    
+    completeActiveTask() {
+        if (!this.data.activeTask) {
+            this.showNotification('❌ No hay tarea activa seleccionada', 'error');
+            return;
+        }
+
+        // Validar requisitos antes de completar tarea
+        const validationResult = this.validateTaskCompletion();
+        if (!validationResult.valid) {
+            this.showTaskCompletionError(validationResult.message);
+            return;
+        }
+
+        // Encontrar la tarea en el listado
+        const task = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+        if (!task) {
+            this.showNotification('❌ Tarea no encontrada', 'error');
+            return;
+        }
+
+        if (task.completed) {
+            this.showNotification('✅ Esta tarea ya está completada', 'info');
+            return;
+        }
+
+        // Completar la tarea
+        task.completed = true;
+        this.data.points += task.points;
+        this.data.totalCompleted++;
+        this.data.completedToday[this.data.activeTask.category]++;
+        
+        // Limpiar tarea activa después de completarla
+        this.data.activeTask = null;
+        
+        // Mostrar celebración
+        this.showCelebration(task.points);
+        this.checkLevelUp();
+        this.checkAchievements();
+        this.updateLastCompletedDate();
+        
+        // Actualizar displays
+        this.saveData();
+        this.renderTasks();
+        this.updateStats();
+        this.updateProgress();
+        this.updateMotivation();
+        this.updateDailyStats();
+        this.updateGoalMultipliers();
+        this.updateActiveTaskDisplay();
+        
+        // Mostrar notificación de éxito
+        this.showNotification(`🎉 ¡Tarea completada! +${task.points} XP`, 'success');
     }
     
     // Bonus XP por completar tarea activa durante Pomodoro
