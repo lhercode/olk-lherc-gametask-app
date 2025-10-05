@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Site.Title }}</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -583,8 +583,8 @@
         </div>
     </div>
 
-    <script src="/js/daily-system.js"></script>
-    <script src="/js/app.js"></script>
-    <script src="/js/debug.js"></script>
+    <script src="{{ "js/daily-system.js" | relURL }}"></script>
+    <script src="{{ "js/app.js" | relURL }}"></script>
+    <script src="{{ "js/debug.js" | relURL }}"></script>
 </body>
 </html>
