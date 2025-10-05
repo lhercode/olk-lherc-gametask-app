@@ -133,6 +133,13 @@ class TaskQuestGame {
         if (!task) return;
 
         if (!task.completed) {
+            // Validar requisitos antes de completar tarea
+            const validationResult = this.validateTaskCompletion();
+            if (!validationResult.valid) {
+                this.showTaskCompletionError(validationResult.message);
+                return;
+            }
+            
             // Completar tarea
             task.completed = true;
             this.data.points += task.points;
@@ -157,6 +164,112 @@ class TaskQuestGame {
         this.updateMotivation();
         this.updateDailyStats();
         this.updateGoalMultipliers();
+    }
+
+    // Validar requisitos para completar una tarea
+    validateTaskCompletion() {
+        // 1. Verificar que hay una tarea activa
+        if (!this.data.activeTask) {
+            return {
+                valid: false,
+                message: '🎯 Necesitas seleccionar una tarea activa primero. Ve a "Block Time" y selecciona una tarea para enfocarte.'
+            };
+        }
+
+        // 2. Verificar que se ha completado al menos un pomodoro hoy
+        if (this.data.pomodoro.pomodorosToday < 1) {
+            return {
+                valid: false,
+                message: '🍅 Necesitas completar al menos un pomodoro antes de marcar tareas como completadas. ¡Usa el Block Time!'
+            };
+        }
+
+        // 3. Verificar que se ha tomado al menos un descanso hoy
+        if (!this.data.restData || !this.data.restData.lastRestTime) {
+            return {
+                valid: false,
+                message: '☕ Necesitas tomar al menos un descanso antes de completar tareas. ¡Cuida tu bienestar!'
+            };
+        }
+
+        // 4. Verificar que el descanso fue reciente (no más de 4 horas)
+        const lastRestTime = new Date(this.data.restData.lastRestTime);
+        const now = new Date();
+        const hoursSinceRest = (now - lastRestTime) / (1000 * 60 * 60);
+        
+        if (hoursSinceRest > 4) {
+            return {
+                valid: false,
+                message: '⏰ Tu último descanso fue hace más de 4 horas. ¡Tómate un descanso antes de continuar!'
+            };
+        }
+
+        // 5. Verificar que la tarea que se quiere completar es la tarea activa
+        const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+        if (!currentTask || currentTask.completed) {
+            return {
+                valid: false,
+                message: '🎯 Solo puedes completar tu tarea activa actual. Ve a "Block Time" para ver cuál es tu tarea activa.'
+            };
+        }
+
+        return { valid: true };
+    }
+
+    // Mostrar error de validación
+    showTaskCompletionError(message) {
+        // Crear modal de error personalizado
+        const errorModal = document.createElement('div');
+        errorModal.className = 'modal task-error-modal';
+        errorModal.innerHTML = `
+            <div class="modal-content task-error-content">
+                <div class="error-header">
+                    <span class="error-icon">⚠️</span>
+                    <h2>Requisitos No Cumplidos</h2>
+                </div>
+                <div class="error-body">
+                    <p class="error-message">${message}</p>
+                    <div class="error-requirements">
+                        <h3>📋 Para completar tareas necesitas:</h3>
+                        <ul class="requirements-list">
+                            <li>🎯 Tener una tarea activa seleccionada</li>
+                            <li>🍅 Completar al menos un pomodoro</li>
+                            <li>☕ Tomar al menos un descanso</li>
+                            <li>⏰ Descanso reciente (máximo 4 horas)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="error-actions">
+                    <button class="error-btn primary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        Entendido
+                    </button>
+                    <button class="error-btn secondary" onclick="this.parentElement.parentElement.parentElement.remove(); window.game.showTaskSelector();">
+                        Seleccionar Tarea Activa
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Añadir estilos
+        errorModal.style.cssText = `
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+        `;
+        
+        document.body.appendChild(errorModal);
+        
+        // Auto-cerrar después de 10 segundos
+        setTimeout(() => {
+            if (errorModal.parentNode) {
+                errorModal.remove();
+            }
+        }, 10000);
     }
 
     deleteTask(category, taskId) {
@@ -1928,3 +2041,125 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('🎮 TaskQuest inicializado. Usa debugProgressBar(), testProgressWidth(), o testBarVisibility() para probar la barra de progreso.');
 });
+
+// CSS para el modal de error de validación
+const taskErrorCSS = `
+.task-error-modal .task-error-content {
+    background: var(--card-bg);
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: slideDown 0.3s ease;
+    border: 2px solid #ef4444;
+}
+
+.error-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.error-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.error-header h2 {
+    font-size: 22px;
+    color: #ef4444;
+    margin: 0;
+}
+
+.error-body {
+    margin-bottom: 25px;
+}
+
+.error-message {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.error-requirements h3 {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.requirements-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.requirements-list li:last-child {
+    border-bottom: none;
+}
+
+.error-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.error-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.error-btn.primary {
+    background: #ef4444;
+    color: white;
+}
+
+.error-btn.primary:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.error-btn.secondary {
+    background: var(--background-alt);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.error-btn.secondary:hover {
+    background: var(--background);
+    transform: scale(1.05);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+`;
+
+// Añadir CSS al documento
+const errorStyle = document.createElement('style');
+errorStyle.textContent = taskErrorCSS;
+document.head.appendChild(errorStyle);
