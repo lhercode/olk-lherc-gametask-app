@@ -999,6 +999,9 @@ class TaskQuestGame {
         // Actualizar display
         this.updateRestAlert();
         
+        // Actualizar requisitos de tarea activa
+        this.updateTaskRequirements();
+        
         // Mostrar notificación especial
         this.showRestNotification('😴 Descanso registrado. ¡Recarga tus energías!', 'success');
         
@@ -1603,6 +1606,9 @@ class TaskQuestGame {
             document.getElementById('activeTaskName').textContent = this.data.activeTask.name;
             document.getElementById('activeTaskPoints').textContent = `${this.data.activeTask.points} XP`;
             
+            // Mostrar bloque de tiempo y requisitos
+            this.updateTaskRequirements();
+            
             // Añadir clase visual al timer
             document.querySelector('.timer-display').classList.add('with-active-task');
         } else {
@@ -1661,19 +1667,112 @@ class TaskQuestGame {
     selectActiveTask(category, taskId) {
         const task = this.data.tasks[category].find(t => t.id === taskId);
         if (task) {
+            const now = new Date();
+            const timeBlock = this.calculateTimeBlock(now);
+            
             this.data.activeTask = {
                 id: task.id,
                 name: task.name,
                 points: task.points,
-                category: category
+                category: category,
+                startTime: now.toISOString(),
+                timeBlock: timeBlock,
+                pomodorosCompleted: 0,
+                breaksTaken: 0,
+                canComplete: false
             };
             this.saveData();
             this.updateActiveTaskDisplay();
             this.closeTaskSelector();
             
-            // Mostrar notificación
-            this.showNotification(`🎯 Tarea activa: ${task.name}`, 'info');
+            // Mostrar notificación con bloque de tiempo
+            this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}`, 'info');
         }
+    }
+    
+    // Calcular bloque de tiempo (ej: 9:00-9:30, 9:30-10:00)
+    calculateTimeBlock(date) {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        
+        // Redondear a bloques de 30 minutos
+        const blockStart = Math.floor(minutes / 30) * 30;
+        const blockEnd = blockStart + 30;
+        
+        const startHour = hours;
+        const endHour = blockEnd >= 60 ? hours + 1 : hours;
+        const endMinutes = blockEnd >= 60 ? blockEnd - 60 : blockEnd;
+        
+        const formatTime = (h, m) => {
+            const hour = h.toString().padStart(2, '0');
+            const min = m.toString().padStart(2, '0');
+            return `${hour}:${min}`;
+        };
+        
+        return `${formatTime(startHour, blockStart)} - ${formatTime(endHour, endMinutes)}`;
+    }
+    
+    // Actualizar requisitos de la tarea activa
+    updateTaskRequirements() {
+        if (!this.data.activeTask) return;
+        
+        // Calcular requisitos actuales
+        const pomodorosToday = this.data.pomodoro.pomodorosToday;
+        const hasRecentBreak = this.checkRecentBreak();
+        
+        // Actualizar contadores en la tarea activa
+        this.data.activeTask.pomodorosCompleted = pomodorosToday;
+        this.data.activeTask.breaksTaken = this.data.restData?.restSessions || 0;
+        this.data.activeTask.canComplete = pomodorosToday >= 1 && hasRecentBreak;
+        
+        // Actualizar el estado del pomodoro
+        const statusElement = document.getElementById('pomodoroStatus');
+        if (statusElement) {
+            let statusText = `⏰ Bloque: ${this.data.activeTask.timeBlock}\n`;
+            statusText += `🍅 Pomodoros: ${pomodorosToday}/1 `;
+            statusText += pomodorosToday >= 1 ? '✅' : '❌';
+            statusText += `\n☕ Descansos: ${this.data.activeTask.breaksTaken}/1 `;
+            statusText += hasRecentBreak ? '✅' : '❌';
+            
+            if (this.data.activeTask.canComplete) {
+                statusText += `\n🎯 ¡Lista para completar!`;
+                statusElement.style.color = '#10b981';
+            } else {
+                statusText += `\n⏳ Completa los requisitos para finalizar`;
+                statusElement.style.color = '#f59e0b';
+            }
+            
+            statusElement.textContent = statusText;
+        }
+        
+        // Actualizar estado del botón de completar
+        const completeBtn = document.getElementById('completeTaskBtn');
+        if (completeBtn) {
+            if (this.data.activeTask.canComplete) {
+                completeBtn.disabled = false;
+                completeBtn.style.background = 'var(--gradient-primary)';
+                completeBtn.style.opacity = '1';
+                completeBtn.textContent = '✅ Completar Tarea';
+            } else {
+                completeBtn.disabled = true;
+                completeBtn.style.background = 'var(--background-alt)';
+                completeBtn.style.opacity = '0.6';
+                completeBtn.textContent = '⏳ Cumple requisitos';
+            }
+        }
+        
+        this.saveData();
+    }
+    
+    // Verificar si hay un descanso reciente
+    checkRecentBreak() {
+        if (!this.data.restData || !this.data.restData.lastRestTime) return false;
+        
+        const lastRestTime = new Date(this.data.restData.lastRestTime);
+        const now = new Date();
+        const hoursSinceRest = (now - lastRestTime) / (1000 * 60 * 60);
+        
+        return hoursSinceRest <= 4;
     }
     
     clearActiveTask() {
@@ -1689,10 +1788,9 @@ class TaskQuestGame {
             return;
         }
 
-        // Validar requisitos antes de completar tarea
-        const validationResult = this.validateTaskCompletion();
-        if (!validationResult.valid) {
-            this.showTaskCompletionError(validationResult.message);
+        // Verificar si la tarea puede completarse
+        if (!this.data.activeTask.canComplete) {
+            this.showTaskCompletionError('⏳ Necesitas completar 1 pomodoro y tomar 1 descanso antes de finalizar la tarea');
             return;
         }
 
@@ -1755,6 +1853,9 @@ class TaskQuestGame {
         this.data.points += pointsEarned;
         this.updateStats();
         this.updateProgress();
+        
+        // Actualizar requisitos de tarea activa
+        this.updateTaskRequirements();
         
         // Mostrar celebración
         this.showPomodoroCelebration();
