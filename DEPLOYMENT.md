@@ -53,7 +53,7 @@ git push origin main
 2. **Verifica que el workflow "GitHub Pages" se ejecute correctamente**
 3. **Una vez completado, tu sitio estará disponible en:**
    ```
-   https://tu-usuario.github.io/task-game/
+   https://taskquest.lherc.com/
    ```
 
 ## 🔍 Solución de Problemas
@@ -73,7 +73,7 @@ git push origin main
 
 1. **Verifica la configuración de `baseURL`** en `config.toml`:
    ```toml
-   baseURL = "https://tu-usuario.github.io/task-game/"
+   baseURL = "https://taskquest.lherc.com/"
    ```
 
 2. **Asegúrate de que el archivo `.nojekyll` existe** en la carpeta `public/`
@@ -113,4 +113,4 @@ hugo --minify
 
 Una vez completados estos pasos, tu sitio TaskQuest estará disponible en GitHub Pages y se actualizará automáticamente cada vez que hagas push de cambios.
 
-**URL de tu sitio**: `https://tu-usuario.github.io/task-game/`
+**URL de tu sitio**: `https://taskquest.lherc.com/`

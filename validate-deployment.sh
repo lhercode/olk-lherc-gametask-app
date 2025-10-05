@@ -53,11 +53,11 @@ echo "✅ public/js/app.js existe"
 echo "🔍 Verificando configuración..."
 
 # Verificar baseURL
-if grep -q 'baseURL = "https://.*github\.io' config.toml; then
-    echo "✅ baseURL configurado para GitHub Pages"
+if grep -q 'baseURL = "https://taskquest\.lherc\.com' config.toml; then
+    echo "✅ baseURL configurado para taskquest.lherc.com"
 else
-    echo "❌ baseURL no está configurado para GitHub Pages"
-    echo "   Debe ser: baseURL = \"https://tu-usuario.github.io/task-game/\""
+    echo "❌ baseURL no está configurado para taskquest.lherc.com"
+    echo "   Debe ser: baseURL = \"https://taskquest.lherc.com/\""
 fi
 
 # Verificar que el workflow existe
@@ -81,6 +81,6 @@ echo "📋 Próximos pasos:"
 echo "1. Haz commit y push de todos los archivos"
 echo "2. Ve a Settings > Pages en tu repositorio"
 echo "3. Configura Source como 'GitHub Actions'"
-echo "4. Tu sitio estará disponible en: https://tu-usuario.github.io/task-game/"
+echo "4. Tu sitio estará disponible en: https://taskquest.lherc.com/"
 echo ""
 echo "📖 Para más detalles, consulta DEPLOYMENT.md"

@@ -1,4 +1,4 @@
-baseURL = "https://lhercode.github.io/olk-lherc-gametask-app/"
+baseURL = "https://taskquest.lherc.com/"
 languageCode = "es-es"
 title = "TaskQuest - Tu Juego de Tareas"
 theme = "taskquest"
