@@ -1433,6 +1433,14 @@ class TaskQuestGame {
     }
 
     completeBreakSession() {
+        // Incrementar contador específico de la tarea activa
+        if (this.data.activeTask) {
+            this.data.activeTask.breaksTaken++;
+        }
+        
+        // Actualizar requisitos de tarea activa
+        this.updateTaskRequirements();
+        
         // Cambiar botón de pausa a iniciar
         this.updatePomodoroButtons();
         this.startWork();
@@ -1892,39 +1900,133 @@ class TaskQuestGame {
     selectActiveTask(category, taskId) {
         const task = this.data.tasks[category].find(t => t.id === taskId);
         if (task) {
+            const now = new Date();
+            const timeBlock = this.calculateTimeBlock(now);
+            
             // Verificar si ya hay una tarea activa
             if (this.data.activeTask) {
                 const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
                 if (currentTask && !currentTask.completed) {
-                    this.showNotification('⚠️ Ya tienes una tarea activa. Completa o cambia la tarea actual primero.', 'warning');
+                    // Permitir cambio de tarea pero con confirmación
+                    this.showTaskChangeConfirmation(task, category, timeBlock);
                     return;
                 }
             }
             
+            // Si no hay tarea activa o la actual está completada, proceder normalmente
+            this.setNewActiveTask(task, category, timeBlock);
+        }
+    }
+
+    // Mostrar confirmación para cambiar tarea activa
+    showTaskChangeConfirmation(newTask, category, timeBlock) {
+        const currentTaskName = this.data.activeTask.name;
+        const modal = document.createElement('div');
+        modal.className = 'modal task-change-modal';
+        modal.innerHTML = `
+            <div class="modal-content task-change-content">
+                <div class="task-change-header">
+                    <span class="task-change-icon">🔄</span>
+                    <h2>Cambiar Tarea Activa</h2>
+                </div>
+                <div class="task-change-body">
+                    <p class="change-message">¿Quieres cambiar de tarea activa?</p>
+                    <div class="task-comparison">
+                        <div class="current-task">
+                            <h3>📋 Tarea Actual</h3>
+                            <p class="task-name">${currentTaskName}</p>
+                            <div class="task-progress">
+                                <span>🍅 Pomodoros: ${this.data.activeTask.pomodorosCompleted}/1</span>
+                                <span>☕ Descansos: ${this.data.activeTask.breaksTaken}/1</span>
+                            </div>
+                        </div>
+                        <div class="new-task">
+                            <h3>🎯 Nueva Tarea</h3>
+                            <p class="task-name">${newTask.name}</p>
+                            <div class="task-warning">
+                                <span>⚠️ Los contadores se reiniciarán a 0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="warning-text">Al cambiar de tarea, tendrás que completar 1 pomodoro y 1 descanso nuevamente para poder finalizar la nueva tarea.</p>
+                </div>
+                <div class="task-change-actions">
+                    <button class="task-change-btn cancel-btn" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        Cancelar
+                    </button>
+                    <button class="task-change-btn confirm-btn" onclick="window.game.confirmTaskChange('${category}', '${newTask.id}')">
+                        Cambiar Tarea
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Añadir estilos
+        modal.style.cssText = `
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-cerrar después de 30 segundos
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 30000);
+    }
+
+    // Confirmar cambio de tarea
+    confirmTaskChange(category, taskId) {
+        const task = this.data.tasks[category].find(t => t.id === taskId);
+        if (task) {
             const now = new Date();
             const timeBlock = this.calculateTimeBlock(now);
             
-            // Reiniciar contadores específicos de la tarea
-            this.resetTaskCounters();
+            // Cerrar modal
+            const modal = document.querySelector('.task-change-modal');
+            if (modal) {
+                modal.remove();
+            }
             
-            this.data.activeTask = {
-                id: task.id,
-                name: task.name,
-                points: task.points,
-                category: category,
-                startTime: now.toISOString(),
-                timeBlock: timeBlock,
-                pomodorosCompleted: 0,
-                breaksTaken: 0,
-                canComplete: false
-            };
-            this.saveData();
-            this.updateActiveTaskDisplay();
-            this.closeTaskSelector();
+            // Establecer nueva tarea activa
+            this.setNewActiveTask(task, category, timeBlock);
             
-            // Mostrar notificación con bloque de tiempo
-            this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}\n🔄 Contadores reiniciados`, 'info');
+            // Mostrar notificación de cambio
+            this.showNotification(`🔄 Tarea cambiada: ${task.name}\n🔄 Contadores reiniciados`, 'info');
         }
+    }
+
+    // Establecer nueva tarea activa (función auxiliar)
+    setNewActiveTask(task, category, timeBlock) {
+        // Reiniciar contadores específicos de la tarea
+        this.resetTaskCounters();
+        
+        this.data.activeTask = {
+            id: task.id,
+            name: task.name,
+            points: task.points,
+            category: category,
+            startTime: new Date().toISOString(),
+            timeBlock: timeBlock,
+            pomodorosCompleted: 0,
+            breaksTaken: 0,
+            canComplete: false
+        };
+        
+        this.saveData();
+        this.updateActiveTaskDisplay();
+        this.closeTaskSelector();
+        
+        // Mostrar notificación con bloque de tiempo
+        this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}\n🔄 Contadores reiniciados`, 'info');
     }
     
     // Calcular bloque de tiempo (ej: 9:00-9:30, 9:30-10:00)
@@ -1956,10 +2058,9 @@ class TaskQuestGame {
         // Usar contadores específicos de la tarea activa
         const taskPomodoros = this.data.activeTask.pomodorosCompleted;
         const taskBreaks = this.data.activeTask.breaksTaken;
-        const hasRecentBreak = this.checkRecentBreak();
         
-        // Actualizar si puede completarse
-        this.data.activeTask.canComplete = taskPomodoros >= 1 && taskBreaks >= 1 && hasRecentBreak;
+        // Los requisitos son: 1 pomodoro Y 1 descanso (sin verificar tiempo reciente)
+        this.data.activeTask.canComplete = taskPomodoros >= 1 && taskBreaks >= 1;
         
         // Actualizar el estado del pomodoro
         const statusElement = document.getElementById('pomodoroStatus');
@@ -2336,6 +2437,13 @@ function clearActiveTask() {
 function showClearDataModal() {
     if (window.game) {
         window.game.showClearDataModal();
+    }
+}
+
+// Función global para confirmar cambio de tarea
+function confirmTaskChange(category, taskId) {
+    if (window.game) {
+        window.game.confirmTaskChange(category, taskId);
     }
 }
 

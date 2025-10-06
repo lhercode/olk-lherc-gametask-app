@@ -4362,47 +4362,342 @@ button, .btn, .nav-btn, .rest-btn, .rest-btn-compact {
     transform: scale(0.95);
 }
 
-/* Clear Data Button in UI */
-.clear-data-button {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
+/* Task Change Modal Styles */
+.task-change-modal .task-change-content {
+    background: var(--card-bg);
+    margin: 5% auto;
+    padding: 40px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 700px;
+    position: relative;
+    animation: slideDown 0.3s ease;
+    border: 2px solid #3b82f6;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.task-change-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.task-change-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+    animation: rotate 2s linear infinite;
+}
+
+.task-change-header h2 {
+    font-size: 24px;
+    color: #3b82f6;
+    margin: 0;
+    font-weight: 700;
+}
+
+.task-change-body {
+    margin-bottom: 30px;
+}
+
+.change-message {
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.task-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.current-task, .new-task {
+    background: var(--background-alt);
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid var(--border);
+}
+
+.current-task {
+    border-color: #f59e0b;
+}
+
+.new-task {
+    border-color: #3b82f6;
+}
+
+.current-task h3, .new-task h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.task-name {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+.task-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.task-progress span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--background);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.task-warning {
+    margin-top: 10px;
+}
+
+.task-warning span {
+    font-size: 12px;
+    color: #f59e0b;
+    font-weight: 600;
+    background: #fef3c7;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.warning-text {
+    text-align: center;
+    font-size: 14px;
+    color: #dc2626;
+    font-weight: 600;
+    background: #fef2f2;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+    margin-top: 20px;
+}
+
+.task-change-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.task-change-btn {
+    padding: 12px 24px;
     border: none;
-    border-radius: 50px;
-    padding: 12px 20px;
+    border-radius: 25px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     font-family: 'Poppins', sans-serif;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    min-width: 120px;
 }
 
-.clear-data-button:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
+.task-change-btn.cancel-btn {
+    background: var(--background-alt);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+}
+
+.task-change-btn.cancel-btn:hover {
+    background: var(--background);
+    border-color: var(--primary);
     transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
-.clear-data-button:active {
+.task-change-btn.confirm-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border: 2px solid #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.task-change-btn.confirm-btn:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.task-change-btn.confirm-btn:active {
     transform: scale(0.95);
 }
 
-.clear-data-button .button-icon {
-    font-size: 16px;
+/* Animations */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-.clear-data-button .button-text {
-    font-size: 12px;
+/* Responsive for Task Change Modal */
+@media (max-width: 768px) {
+    .task-change-modal .task-change-content {
+        margin: 10% auto;
+        padding: 25px;
+        width: 95%;
+    }
+    
+    .task-change-header h2 {
+        font-size: 20px;
+    }
+    
+    .task-change-icon {
+        font-size: 36px;
+    }
+    
+    .task-comparison {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .current-task, .new-task {
+        padding: 15px;
+    }
+    
+    .task-change-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .task-change-btn {
+        width: 100%;
+        padding: 15px;
+    }
+}
+
+/* Admin Section Styles */
+.admin-section {
+    margin: var(--space-xl) 0;
+    padding: var(--space-lg);
+    background: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border);
+}
+
+.admin-section h2 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+    font-size: 1.5rem;
     font-weight: 700;
+    text-align: center;
+}
+
+.admin-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.admin-card {
+    background: var(--background-alt);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    border: 2px solid #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.admin-icon {
+    font-size: 24px;
+    animation: shake 0.5s infinite;
+}
+
+.admin-header h3 {
+    color: #ef4444;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.admin-description {
+    margin-bottom: var(--space-lg);
+}
+
+.admin-description p {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+    font-size: 0.9rem;
+}
+
+.admin-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-md) 0;
+    background: #fef2f2;
+    border-radius: var(--border-radius);
+    padding: var(--space-md);
+    border: 1px solid #fecaca;
+}
+
+.admin-list li {
+    padding: 4px 0;
+    font-size: 0.85rem;
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.admin-warning {
+    color: #dc2626 !important;
+    font-weight: 700 !important;
+    background: #fef2f2;
+    padding: var(--space-sm);
+    border-radius: var(--border-radius);
+    border: 1px solid #fecaca;
+    text-align: center;
+    margin-top: var(--space-md) !important;
+}
+
+.admin-clear-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-md) var(--space-lg);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.admin-clear-btn:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.admin-clear-btn:active {
+    transform: translateY(0);
+}
+
+.admin-clear-btn .btn-icon {
+    font-size: 18px;
+}
+
+.admin-clear-btn .btn-text {
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 /* Animations */
@@ -4457,15 +4752,50 @@ button, .btn, .nav-btn, .rest-btn, .rest-btn-compact {
         width: 100%;
         padding: 15px;
     }
-    
-    .clear-data-button {
-        bottom: 15px;
-        right: 15px;
-        padding: 10px 16px;
-        font-size: 12px;
+}
+
+/* Responsive for Admin Section */
+@media (max-width: 768px) {
+    .admin-section {
+        margin: var(--space-lg) 0;
+        padding: var(--space-md);
     }
     
-    .clear-data-button .button-text {
-        display: none;
+    .admin-section h2 {
+        font-size: 1.25rem;
+    }
+    
+    .admin-card {
+        padding: var(--space-md);
+    }
+    
+    .admin-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .admin-icon {
+        font-size: 20px;
+    }
+    
+    .admin-description p {
+        font-size: 0.85rem;
+    }
+    
+    .admin-list {
+        padding: var(--space-sm);
+    }
+    
+    .admin-list li {
+        font-size: 0.8rem;
+        padding: 3px 0;
+    }
+    
+    .admin-clear-btn {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.9rem;
+    }
+    
+    .admin-clear-btn .btn-text {
+        font-size: 0.85rem;
     }
 }

@@ -510,6 +510,34 @@
             <h2>🏆 Logros Desbloqueados</h2>
             <div class="achievements" id="achievements"></div>
         </div>
+
+        <!-- Sección de administración -->
+        <div class="admin-section">
+            <h2>⚙️ Administración</h2>
+            <div class="admin-content">
+                <div class="admin-card">
+                    <div class="admin-header">
+                        <span class="admin-icon">🗑️</span>
+                        <h3>Limpiar Datos</h3>
+                    </div>
+                    <div class="admin-description">
+                        <p>Elimina todos los datos de la aplicación:</p>
+                        <ul class="admin-list">
+                            <li>📊 Puntos y nivel</li>
+                            <li>📝 Todas las tareas</li>
+                            <li>🍅 Progreso de pomodoros</li>
+                            <li>📈 Estadísticas históricas</li>
+                            <li>🏆 Logros desbloqueados</li>
+                        </ul>
+                        <p class="admin-warning">⚠️ Esta acción no se puede deshacer</p>
+                    </div>
+                    <button class="admin-clear-btn" onclick="showClearDataModal()">
+                        <span class="btn-icon">🗑️</span>
+                        <span class="btn-text">Limpiar Todos los Datos</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal para añadir tareas -->
@@ -584,11 +612,6 @@
         </div>
     </div>
 
-    <!-- Botón de limpiar datos -->
-    <button class="clear-data-button" onclick="showClearDataModal()" title="Limpiar todos los datos">
-        <span class="button-icon">🗑️</span>
-        <span class="button-text">Limpiar</span>
-    </button>
 
     <script src="{{ "js/daily-system.js" | relURL }}"></script>
     <script src="{{ "js/app.js" | relURL }}"></script>
