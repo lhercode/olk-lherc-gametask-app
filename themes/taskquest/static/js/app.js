@@ -992,6 +992,11 @@ class TaskQuestGame {
         this.data.restData.lastRestTime = now.toISOString();
         this.data.restData.restSessions++;
         
+        // Incrementar contador específico de la tarea activa
+        if (this.data.activeTask) {
+            this.data.activeTask.breaksTaken++;
+        }
+        
         // Calcular duración del descanso (mínimo 5 minutos)
         const restDuration = 5; // minutos
         this.data.restData.totalRestTime += restDuration;
@@ -1391,6 +1396,8 @@ class TaskQuestGame {
     }
 
     completeBreakSession() {
+        // Cambiar botón de pausa a iniciar
+        this.updatePomodoroButtons();
         this.startWork();
     }
 
@@ -1521,6 +1528,28 @@ class TaskQuestGame {
         const minutes = this.data.pomodoro.focusTimeToday % 60;
         const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
         document.getElementById('focusTime').textContent = timeString;
+    }
+
+    updatePomodoroButtons() {
+        // Cambiar botón de pausa a iniciar cuando termine un pomodoro o descanso
+        document.getElementById('startBtn').style.display = 'block';
+        document.getElementById('pauseBtn').style.display = 'none';
+    }
+
+    resetTaskCounters() {
+        // Reiniciar contadores específicos para la nueva tarea activa
+        if (this.data.activeTask) {
+            this.data.activeTask.pomodorosCompleted = 0;
+            this.data.activeTask.breaksTaken = 0;
+            this.data.activeTask.canComplete = false;
+        }
+        
+        // También reiniciar contadores globales del día si es necesario
+        // (opcional: comentar estas líneas si quieres mantener contadores globales)
+        // this.data.pomodoro.pomodorosToday = 0;
+        // this.data.pomodoro.focusTimeToday = 0;
+        
+        console.log('🔄 Contadores de tarea reiniciados');
     }
 
     showPomodoroCelebration() {
@@ -1667,8 +1696,20 @@ class TaskQuestGame {
     selectActiveTask(category, taskId) {
         const task = this.data.tasks[category].find(t => t.id === taskId);
         if (task) {
+            // Verificar si ya hay una tarea activa
+            if (this.data.activeTask) {
+                const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+                if (currentTask && !currentTask.completed) {
+                    this.showNotification('⚠️ Ya tienes una tarea activa. Completa o cambia la tarea actual primero.', 'warning');
+                    return;
+                }
+            }
+            
             const now = new Date();
             const timeBlock = this.calculateTimeBlock(now);
+            
+            // Reiniciar contadores específicos de la tarea
+            this.resetTaskCounters();
             
             this.data.activeTask = {
                 id: task.id,
@@ -1686,7 +1727,7 @@ class TaskQuestGame {
             this.closeTaskSelector();
             
             // Mostrar notificación con bloque de tiempo
-            this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}`, 'info');
+            this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}\n🔄 Contadores reiniciados`, 'info');
         }
     }
     
@@ -1716,23 +1757,22 @@ class TaskQuestGame {
     updateTaskRequirements() {
         if (!this.data.activeTask) return;
         
-        // Calcular requisitos actuales
-        const pomodorosToday = this.data.pomodoro.pomodorosToday;
+        // Usar contadores específicos de la tarea activa
+        const taskPomodoros = this.data.activeTask.pomodorosCompleted;
+        const taskBreaks = this.data.activeTask.breaksTaken;
         const hasRecentBreak = this.checkRecentBreak();
         
-        // Actualizar contadores en la tarea activa
-        this.data.activeTask.pomodorosCompleted = pomodorosToday;
-        this.data.activeTask.breaksTaken = this.data.restData?.restSessions || 0;
-        this.data.activeTask.canComplete = pomodorosToday >= 1 && hasRecentBreak;
+        // Actualizar si puede completarse
+        this.data.activeTask.canComplete = taskPomodoros >= 1 && taskBreaks >= 1 && hasRecentBreak;
         
         // Actualizar el estado del pomodoro
         const statusElement = document.getElementById('pomodoroStatus');
         if (statusElement) {
             let statusText = `⏰ Bloque: ${this.data.activeTask.timeBlock}\n`;
-            statusText += `🍅 Pomodoros: ${pomodorosToday}/1 `;
-            statusText += pomodorosToday >= 1 ? '✅' : '❌';
-            statusText += `\n☕ Descansos: ${this.data.activeTask.breaksTaken}/1 `;
-            statusText += hasRecentBreak ? '✅' : '❌';
+            statusText += `🍅 Pomodoros: ${taskPomodoros}/1 `;
+            statusText += taskPomodoros >= 1 ? '✅' : '❌';
+            statusText += `\n☕ Descansos: ${taskBreaks}/1 `;
+            statusText += taskBreaks >= 1 ? '✅' : '❌';
             
             if (this.data.activeTask.canComplete) {
                 statusText += `\n🎯 ¡Lista para completar!`;
@@ -1750,13 +1790,11 @@ class TaskQuestGame {
         if (completeBtn) {
             if (this.data.activeTask.canComplete) {
                 completeBtn.disabled = false;
-                completeBtn.style.background = 'var(--gradient-primary)';
-                completeBtn.style.opacity = '1';
+                completeBtn.className = 'finalize-task-btn';
                 completeBtn.textContent = '✅ Completar Tarea';
             } else {
                 completeBtn.disabled = true;
-                completeBtn.style.background = 'var(--background-alt)';
-                completeBtn.style.opacity = '0.6';
+                completeBtn.className = 'finalize-task-btn requirements-btn';
                 completeBtn.textContent = '⏳ Cumple requisitos';
             }
         }
@@ -1841,6 +1879,11 @@ class TaskQuestGame {
         this.data.pomodoro.pomodorosToday++;
         this.data.pomodoro.focusTimeToday += this.data.pomodoro.settings.workDuration;
         
+        // Incrementar contador específico de la tarea activa
+        if (this.data.activeTask) {
+            this.data.activeTask.pomodorosCompleted++;
+        }
+        
         // Ganar puntos por completar un pomodoro
         let pointsEarned = 15;
         
@@ -1856,6 +1899,9 @@ class TaskQuestGame {
         
         // Actualizar requisitos de tarea activa
         this.updateTaskRequirements();
+        
+        // Cambiar botón de pausa a iniciar
+        this.updatePomodoroButtons();
         
         // Mostrar celebración
         this.showPomodoroCelebration();
