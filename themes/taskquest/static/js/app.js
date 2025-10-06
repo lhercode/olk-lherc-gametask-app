@@ -1252,7 +1252,10 @@ class TaskQuestGame {
             timeLeft: this.data.pomodoro.settings.workDuration * 60, // en segundos
             totalTime: this.data.pomodoro.settings.workDuration * 60,
             pomodoroCount: 0,
-            intervalId: null
+            intervalId: null,
+            startTime: null, // Timestamp cuando se inició el pomodoro
+            pausedTime: null, // Timestamp cuando se pausó
+            totalPausedTime: 0 // Tiempo total pausado en segundos
         };
         
         this.updatePomodoroDisplay();
@@ -1261,6 +1264,9 @@ class TaskQuestGame {
         this.loadPomodoroSettings();
         this.updateActiveTaskDisplay();
         this.initializeTimerProgress();
+        this.setupVisibilityDetection();
+        this.loadPomodoroState();
+        this.checkBackgroundTimer();
     }
 
     setupPomodoroEventListeners() {
@@ -1305,31 +1311,48 @@ class TaskQuestGame {
         } else {
             this.pomodoroState.isRunning = true;
             this.pomodoroState.isPaused = false;
+            this.pomodoroState.startTime = Date.now();
+            this.pomodoroState.pausedTime = null;
+            this.pomodoroState.totalPausedTime = 0;
             this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
             
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('pauseBtn').style.display = 'block';
             
             this.updateTimerDisplay();
+            this.savePomodoroState();
         }
     }
 
     pausePomodoro() {
         this.pomodoroState.isPaused = true;
         this.pomodoroState.isRunning = false;
+        this.pomodoroState.pausedTime = Date.now();
         clearInterval(this.pomodoroState.intervalId);
         
         document.getElementById('startBtn').style.display = 'block';
         document.getElementById('pauseBtn').style.display = 'none';
+        
+        this.savePomodoroState();
     }
 
     resumePomodoro() {
         this.pomodoroState.isRunning = true;
         this.pomodoroState.isPaused = false;
+        
+        // Calcular tiempo pausado y agregarlo al total
+        if (this.pomodoroState.pausedTime) {
+            const pausedDuration = Math.floor((Date.now() - this.pomodoroState.pausedTime) / 1000);
+            this.pomodoroState.totalPausedTime += pausedDuration;
+            this.pomodoroState.pausedTime = null;
+        }
+        
         this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
         
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'block';
+        
+        this.savePomodoroState();
     }
 
     resetPomodoro() {
@@ -1338,6 +1361,9 @@ class TaskQuestGame {
         this.pomodoroState.currentMode = 'work';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.workDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.workDuration * 60;
+        this.pomodoroState.startTime = null;
+        this.pomodoroState.pausedTime = null;
+        this.pomodoroState.totalPausedTime = 0;
         
         clearInterval(this.pomodoroState.intervalId);
         
@@ -1347,12 +1373,19 @@ class TaskQuestGame {
         this.initializeTimerProgress();
         this.updateTimerDisplay();
         this.updatePomodoroDisplay();
+        this.savePomodoroState();
     }
 
     tick() {
         if (this.pomodoroState.timeLeft > 0) {
             this.pomodoroState.timeLeft--;
             this.updateTimerDisplay();
+            this.updateTimerProgress();
+            
+            // Guardar estado cada 10 segundos para persistencia
+            if (this.pomodoroState.timeLeft % 10 === 0) {
+                this.savePomodoroState();
+            }
         } else {
             this.completePomodoroSession();
         }
@@ -1361,6 +1394,9 @@ class TaskQuestGame {
     completePomodoroSession() {
         clearInterval(this.pomodoroState.intervalId);
         this.pomodoroState.isRunning = false;
+        this.pomodoroState.startTime = null;
+        this.pomodoroState.pausedTime = null;
+        this.pomodoroState.totalPausedTime = 0;
         
         if (this.pomodoroState.currentMode === 'work') {
             this.completeWorkSession();
@@ -1372,6 +1408,7 @@ class TaskQuestGame {
         this.updateDailyStats();
         this.updateGoalMultipliers();
         this.saveData();
+        this.savePomodoroState();
     }
 
     completeWorkSession() {
@@ -1536,6 +1573,84 @@ class TaskQuestGame {
         document.getElementById('pauseBtn').style.display = 'none';
     }
 
+    // Configurar detección de visibilidad para manejar timer en background
+    setupVisibilityDetection() {
+        // Detectar cuando el usuario regresa a la aplicación
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.pomodoroState.isRunning) {
+                this.checkBackgroundTimer();
+            }
+        });
+
+        // Detectar cuando la ventana se enfoca
+        window.addEventListener('focus', () => {
+            if (this.pomodoroState.isRunning) {
+                this.checkBackgroundTimer();
+            }
+        });
+
+        // Detectar cuando la página se carga
+        window.addEventListener('load', () => {
+            if (this.pomodoroState.isRunning) {
+                this.checkBackgroundTimer();
+            }
+        });
+    }
+
+    // Verificar y ajustar timer después de estar en background
+    checkBackgroundTimer() {
+        if (!this.pomodoroState.isRunning || !this.pomodoroState.startTime) {
+            return;
+        }
+
+        const now = Date.now();
+        const startTime = this.pomodoroState.startTime;
+        const totalPausedTime = this.pomodoroState.totalPausedTime;
+        
+        // Calcular tiempo transcurrido real
+        const elapsedTime = Math.floor((now - startTime) / 1000) - totalPausedTime;
+        const remainingTime = this.pomodoroState.totalTime - elapsedTime;
+
+        if (remainingTime <= 0) {
+            // El pomodoro debería haber terminado
+            this.completePomodoroSession();
+        } else {
+            // Actualizar tiempo restante
+            this.pomodoroState.timeLeft = remainingTime;
+            this.updateTimerDisplay();
+        }
+    }
+
+    // Guardar estado del pomodoro para persistencia
+    savePomodoroState() {
+        if (this.pomodoroState.isRunning) {
+            this.data.pomodoroState = {
+                isRunning: this.pomodoroState.isRunning,
+                isPaused: this.pomodoroState.isPaused,
+                currentMode: this.pomodoroState.currentMode,
+                timeLeft: this.pomodoroState.timeLeft,
+                totalTime: this.pomodoroState.totalTime,
+                startTime: this.pomodoroState.startTime,
+                pausedTime: this.pomodoroState.pausedTime,
+                totalPausedTime: this.pomodoroState.totalPausedTime,
+                pomodoroCount: this.pomodoroState.pomodoroCount
+            };
+        } else {
+            this.data.pomodoroState = null;
+        }
+        this.saveData();
+    }
+
+    // Cargar estado del pomodoro al inicializar
+    loadPomodoroState() {
+        if (this.data.pomodoroState && this.data.pomodoroState.isRunning) {
+            this.pomodoroState = { ...this.pomodoroState, ...this.data.pomodoroState };
+            
+            // Verificar si el pomodoro debería haber terminado
+            this.checkBackgroundTimer();
+        }
+    }
+
     resetTaskCounters() {
         // Reiniciar contadores específicos para la nueva tarea activa
         if (this.data.activeTask) {
@@ -1550,6 +1665,87 @@ class TaskQuestGame {
         // this.data.pomodoro.focusTimeToday = 0;
         
         console.log('🔄 Contadores de tarea reiniciados');
+    }
+
+    // Función para limpiar completamente el storage
+    clearAllData() {
+        // Limpiar localStorage
+        localStorage.removeItem('taskQuestData');
+        
+        // Limpiar sessionStorage si existe
+        sessionStorage.clear();
+        
+        // Limpiar cache del navegador si es posible
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        
+        // Mostrar notificación de éxito
+        this.showNotification('🗑️ Todos los datos han sido eliminados. La página se recargará...', 'info');
+        
+        // Recargar la página después de un breve delay
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+
+    // Función para mostrar modal de confirmación
+    showClearDataModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal clear-data-modal';
+        modal.innerHTML = `
+            <div class="modal-content clear-data-content">
+                <div class="clear-data-header">
+                    <span class="clear-data-icon">🗑️</span>
+                    <h2>Limpiar Todos los Datos</h2>
+                </div>
+                <div class="clear-data-body">
+                    <p class="warning-message">⚠️ Esta acción eliminará TODOS los datos de la aplicación:</p>
+                    <ul class="data-list">
+                        <li>📊 Puntos y nivel</li>
+                        <li>📝 Todas las tareas</li>
+                        <li>🍅 Progreso de pomodoros</li>
+                        <li>📈 Estadísticas históricas</li>
+                        <li>🏆 Logros desbloqueados</li>
+                        <li>🎯 Tarea activa actual</li>
+                    </ul>
+                    <p class="warning-text">Esta acción NO se puede deshacer.</p>
+                </div>
+                <div class="clear-data-actions">
+                    <button class="clear-data-btn cancel-btn" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        Cancelar
+                    </button>
+                    <button class="clear-data-btn confirm-btn" onclick="window.game.clearAllData()">
+                        Eliminar Todo
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Añadir estilos
+        modal.style.cssText = `
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-cerrar después de 30 segundos
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 30000);
     }
 
     showPomodoroCelebration() {
@@ -2133,6 +2329,13 @@ function closeTaskSelector() {
 function clearActiveTask() {
     if (window.game) {
         window.game.clearActiveTask();
+    }
+}
+
+// Función global para mostrar modal de limpiar datos
+function showClearDataModal() {
+    if (window.game) {
+        window.game.showClearDataModal();
     }
 }
 

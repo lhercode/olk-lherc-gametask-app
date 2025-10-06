@@ -4236,3 +4236,236 @@ button, .btn, .nav-btn, .rest-btn, .rest-btn-compact {
         width: 150px;
     }
 }
+
+/* Clear Data Modal Styles */
+.clear-data-modal .clear-data-content {
+    background: var(--card-bg);
+    margin: 5% auto;
+    padding: 40px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    animation: slideDown 0.3s ease;
+    border: 2px solid #ef4444;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.clear-data-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.clear-data-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+    animation: shake 0.5s infinite;
+}
+
+.clear-data-header h2 {
+    font-size: 24px;
+    color: #ef4444;
+    margin: 0;
+    font-weight: 700;
+}
+
+.clear-data-body {
+    margin-bottom: 30px;
+}
+
+.warning-message {
+    font-size: 16px;
+    color: #ef4444;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.data-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    background: #fef2f2;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #fecaca;
+}
+
+.data-list li {
+    padding: 8px 0;
+    font-size: 14px;
+    color: #dc2626;
+    font-weight: 500;
+    border-bottom: 1px solid #fecaca;
+}
+
+.data-list li:last-child {
+    border-bottom: none;
+}
+
+.warning-text {
+    text-align: center;
+    font-size: 14px;
+    color: #dc2626;
+    font-weight: 700;
+    background: #fef2f2;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+}
+
+.clear-data-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.clear-data-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    min-width: 120px;
+}
+
+.clear-data-btn.cancel-btn {
+    background: var(--background-alt);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+}
+
+.clear-data-btn.cancel-btn:hover {
+    background: var(--background);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.clear-data-btn.confirm-btn {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: 2px solid #dc2626;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.clear-data-btn.confirm-btn:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.clear-data-btn.confirm-btn:active {
+    transform: scale(0.95);
+}
+
+/* Clear Data Button in UI */
+.clear-data-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.clear-data-button:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.clear-data-button:active {
+    transform: scale(0.95);
+}
+
+.clear-data-button .button-icon {
+    font-size: 16px;
+}
+
+.clear-data-button .button-text {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Animations */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive for Clear Data Modal */
+@media (max-width: 768px) {
+    .clear-data-modal .clear-data-content {
+        margin: 10% auto;
+        padding: 25px;
+        width: 95%;
+    }
+    
+    .clear-data-header h2 {
+        font-size: 20px;
+    }
+    
+    .clear-data-icon {
+        font-size: 36px;
+    }
+    
+    .data-list {
+        padding: 15px;
+    }
+    
+    .data-list li {
+        font-size: 13px;
+        padding: 6px 0;
+    }
+    
+    .clear-data-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .clear-data-btn {
+        width: 100%;
+        padding: 15px;
+    }
+    
+    .clear-data-button {
+        bottom: 15px;
+        right: 15px;
+        padding: 10px 16px;
+        font-size: 12px;
+    }
+    
+    .clear-data-button .button-text {
+        display: none;
+    }
+}
