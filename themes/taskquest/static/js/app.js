@@ -1380,7 +1380,6 @@ class TaskQuestGame {
         if (this.pomodoroState.timeLeft > 0) {
             this.pomodoroState.timeLeft--;
             this.updateTimerDisplay();
-            this.updateTimerProgress();
             
             // Guardar estado cada 10 segundos para persistencia
             if (this.pomodoroState.timeLeft % 10 === 0) {
@@ -1677,32 +1676,60 @@ class TaskQuestGame {
 
     // Función para limpiar completamente el storage
     clearAllData() {
-        // Limpiar localStorage
-        localStorage.removeItem('taskQuestData');
+        console.log('🗑️ Iniciando limpieza de datos...');
         
-        // Limpiar sessionStorage si existe
-        sessionStorage.clear();
-        
-        // Limpiar cache del navegador si es posible
-        if ('caches' in window) {
-            caches.keys().then(function(names) {
-                for (let name of names) {
-                    caches.delete(name);
-                }
-            });
+        try {
+            // Limpiar localStorage
+            localStorage.removeItem('taskQuestData');
+            console.log('✅ localStorage limpiado');
+            
+            // Limpiar sessionStorage si existe
+            sessionStorage.clear();
+            console.log('✅ sessionStorage limpiado');
+            
+            // Limpiar cache del navegador si es posible
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    console.log('🗑️ Limpiando caches:', names);
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+            
+            // Limpiar también el estado del pomodoro guardado
+            localStorage.removeItem('pomodoroState');
+            localStorage.removeItem('restData');
+            localStorage.removeItem('activeTask');
+            
+            console.log('✅ Todos los datos eliminados');
+            
+            // Mostrar notificación de éxito
+            this.showNotification('🗑️ Todos los datos han sido eliminados. La página se recargará...', 'info');
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                console.log('🔄 Recargando página...');
+                window.location.reload();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ Error al limpiar datos:', error);
+            this.showNotification('❌ Error al limpiar datos. Intenta recargar la página manualmente.', 'error');
         }
-        
-        // Mostrar notificación de éxito
-        this.showNotification('🗑️ Todos los datos han sido eliminados. La página se recargará...', 'info');
-        
-        // Recargar la página después de un breve delay
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
     }
 
     // Función para mostrar modal de confirmación
     showClearDataModal() {
+        console.log('🔍 Mostrando modal de limpiar datos...');
+        
+        // Verificar si ya existe un modal
+        const existingModal = document.querySelector('.clear-data-modal');
+        if (existingModal) {
+            console.log('⚠️ Modal ya existe, removiendo...');
+            existingModal.remove();
+        }
+        
         const modal = document.createElement('div');
         modal.className = 'modal clear-data-modal';
         modal.innerHTML = `
@@ -1727,7 +1754,7 @@ class TaskQuestGame {
                     <button class="clear-data-btn cancel-btn" onclick="this.parentElement.parentElement.parentElement.remove()">
                         Cancelar
                     </button>
-                    <button class="clear-data-btn confirm-btn" onclick="window.game.clearAllData()">
+                    <button class="clear-data-btn confirm-btn" onclick="window.game.clearAllData(); this.parentElement.parentElement.parentElement.remove();">
                         Eliminar Todo
                     </button>
                 </div>
@@ -1744,13 +1771,25 @@ class TaskQuestGame {
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
         
+        // Cerrar modal al hacer click fuera
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
         document.body.appendChild(modal);
+        console.log('✅ Modal agregado al DOM');
         
         // Auto-cerrar después de 30 segundos
         setTimeout(() => {
             if (modal.parentNode) {
+                console.log('⏰ Auto-cerrando modal...');
                 modal.remove();
             }
         }, 30000);
@@ -2435,8 +2474,15 @@ function clearActiveTask() {
 
 // Función global para mostrar modal de limpiar datos
 function showClearDataModal() {
+    console.log('🔍 Función global showClearDataModal llamada');
+    console.log('🔍 window.game existe:', !!window.game);
+    
     if (window.game) {
+        console.log('✅ Llamando a window.game.showClearDataModal()');
         window.game.showClearDataModal();
+    } else {
+        console.error('❌ window.game no está disponible');
+        alert('Error: La aplicación no está inicializada correctamente. Recarga la página.');
     }
 }
 
@@ -2444,6 +2490,20 @@ function showClearDataModal() {
 function confirmTaskChange(category, taskId) {
     if (window.game) {
         window.game.confirmTaskChange(category, taskId);
+    }
+}
+
+// Función de prueba para verificar que todo funcione
+function testClearData() {
+    console.log('🧪 Probando funcionalidad de limpiar datos...');
+    console.log('🧪 localStorage antes:', localStorage.getItem('taskQuestData'));
+    console.log('🧪 window.game existe:', !!window.game);
+    
+    if (window.game) {
+        console.log('🧪 Llamando a showClearDataModal...');
+        window.game.showClearDataModal();
+    } else {
+        console.error('🧪 window.game no está disponible');
     }
 }
 
