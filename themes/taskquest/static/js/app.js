@@ -2086,19 +2086,19 @@ class TaskQuestGame {
     }
 
     completeWorkSession() {
-        // Prevenir ejecución múltiple
-        if (this.pomodoroState.isCompleting) {
-            return;
-        }
-        this.pomodoroState.isCompleting = true;
+        console.log('🍅 Completando sesión de trabajo...');
         
         this.pomodoroState.pomodoroCount++;
         this.data.pomodoro.pomodorosToday++;
         this.data.pomodoro.focusTimeToday += this.data.pomodoro.settings.workDuration;
         
+        console.log(`📊 Pomodoros completados: ${this.pomodoroState.pomodoroCount}`);
+        console.log(`📊 Pomodoros hoy: ${this.data.pomodoro.pomodorosToday}`);
+        
         // Incrementar contador específico de la tarea activa
         if (this.data.activeTask) {
             this.data.activeTask.pomodorosCompleted = (this.data.activeTask.pomodorosCompleted || 0) + 1;
+            console.log(`🎯 Pomodoros en tarea activa: ${this.data.activeTask.pomodorosCompleted}`);
         }
         
         // Ganar puntos por completar un pomodoro
@@ -2121,16 +2121,14 @@ class TaskQuestGame {
         this.showPomodoroCelebration();
         
         // Determinar siguiente fase
+        console.log(`🔄 Iniciando descanso... (Pomodoro ${this.pomodoroState.pomodoroCount})`);
         if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
+            console.log('🔄 Iniciando descanso largo...');
             this.startLongBreak();
         } else {
+            console.log('🔄 Iniciando descanso corto...');
             this.startBreak();
         }
-        
-        // Resetear flag después de un delay
-        setTimeout(() => {
-            this.pomodoroState.isCompleting = false;
-        }, 1000);
     }
 
     completeBreakSession() {
@@ -2162,9 +2160,16 @@ class TaskQuestGame {
     }
 
     startBreak() {
+        console.log('☕ Iniciando descanso corto...');
         this.pomodoroState.currentMode = 'break';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.breakDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.breakDuration * 60;
+        
+        // Actualizar botones para mostrar "Iniciar" en lugar de "Pausar"
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
         
         this.updatePomodoroDisplay();
         this.updateTimerDisplay();
@@ -2173,9 +2178,16 @@ class TaskQuestGame {
     }
 
     startLongBreak() {
+        console.log('🎉 Iniciando descanso largo...');
         this.pomodoroState.currentMode = 'longBreak';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.longBreakDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.longBreakDuration * 60;
+        
+        // Actualizar botones para mostrar "Iniciar" en lugar de "Pausar"
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
         
         this.updatePomodoroDisplay();
         this.updateTimerDisplay();
