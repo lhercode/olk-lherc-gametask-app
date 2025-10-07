@@ -22,6 +22,7 @@ class TaskQuestGame {
         this.setupEventListeners();
         this.updateHistoricalStats();
         this.updateDailyStats();
+        this.showHistory('daily'); // Mostrar historial diario por defecto
     }
 
     loadData() {
@@ -54,7 +55,13 @@ class TaskQuestGame {
                     pomodorosUntilLongBreak: 4
                 }
             },
-            activeTask: null
+            activeTask: null,
+            // Nuevo sistema de historial
+            taskHistory: {
+                daily: {}, // { "2024-01-15": { tasks: [], timeBlocks: [] } }
+                weekly: {}, // { "2024-W03": { tasks: [], timeBlocks: [] } }
+                monthly: {}  // { "2024-01": { tasks: [], timeBlocks: [] } }
+            }
         };
 
         const savedData = localStorage.getItem('taskQuestData');
@@ -68,6 +75,374 @@ class TaskQuestGame {
 
     saveData() {
         localStorage.setItem('taskQuestData', JSON.stringify(this.data));
+    }
+
+    // ========== HISTORIAL SYSTEM ==========
+    
+    // Obtener bloque de tiempo de 30 minutos (22:30-23:00, 23:00-23:30, etc.)
+    getTimeBlock(date = new Date()) {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        
+        // Redondear hacia abajo a bloques de 30 minutos
+        const blockStartMinutes = Math.floor(minutes / 30) * 30;
+        const blockEndMinutes = blockStartMinutes + 30;
+        
+        const startHour = hours;
+        const endHour = blockEndMinutes === 60 ? hours + 1 : hours;
+        const endMinutes = blockEndMinutes === 60 ? 0 : blockEndMinutes;
+        
+        return {
+            start: `${startHour.toString().padStart(2, '0')}:${blockStartMinutes.toString().padStart(2, '0')}`,
+            end: `${endHour.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`,
+            blockId: `${startHour.toString().padStart(2, '0')}:${blockStartMinutes.toString().padStart(2, '0')}`
+        };
+    }
+    
+    // Obtener clave de fecha para el historial diario
+    getDateKey(date = new Date()) {
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+    
+    // Obtener clave de semana para el historial semanal
+    getWeekKey(date = new Date()) {
+        const year = date.getFullYear();
+        const week = this.getWeekNumber(date);
+        return `${year}-W${week.toString().padStart(2, '0')}`;
+    }
+    
+    // Obtener clave de mes para el historial mensual
+    getMonthKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        return `${year}-${month}`;
+    }
+    
+    // Calcular número de semana
+    getWeekNumber(date) {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+        return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    }
+    
+    // Registrar tarea completada en el historial
+    recordTaskCompletion(task, completionData) {
+        const now = new Date();
+        const dateKey = this.getDateKey(now);
+        const weekKey = this.getWeekKey(now);
+        const monthKey = this.getMonthKey(now);
+        const timeBlock = this.getTimeBlock(now);
+        
+        const historyEntry = {
+            id: Date.now(),
+            taskId: task.id,
+            taskName: task.name,
+            category: task.category || 'unknown',
+            points: task.points,
+            completedAt: now.toISOString(),
+            timeBlock: timeBlock,
+            pomodorosUsed: completionData.pomodorosUsed || 0,
+            breaksTaken: completionData.breaksTaken || 0,
+            totalTimeSpent: completionData.totalTimeSpent || 0, // en minutos
+            efficiency: completionData.efficiency || 0 // porcentaje
+        };
+        
+        // Inicializar estructuras si no existen
+        if (!this.data.taskHistory.daily[dateKey]) {
+            this.data.taskHistory.daily[dateKey] = { tasks: [], timeBlocks: {} };
+        }
+        if (!this.data.taskHistory.weekly[weekKey]) {
+            this.data.taskHistory.weekly[weekKey] = { tasks: [], timeBlocks: {} };
+        }
+        if (!this.data.taskHistory.monthly[monthKey]) {
+            this.data.taskHistory.monthly[monthKey] = { tasks: [], timeBlocks: {} };
+        }
+        
+        // Agregar a historial diario
+        this.data.taskHistory.daily[dateKey].tasks.push(historyEntry);
+        
+        // Agregar a historial semanal
+        this.data.taskHistory.weekly[weekKey].tasks.push(historyEntry);
+        
+        // Agregar a historial mensual
+        this.data.taskHistory.monthly[monthKey].tasks.push(historyEntry);
+        
+        // Actualizar bloques de tiempo
+        this.updateTimeBlockStats(dateKey, weekKey, monthKey, timeBlock, historyEntry);
+        
+        this.saveData();
+    }
+    
+    // Actualizar estadísticas de bloques de tiempo
+    updateTimeBlockStats(dateKey, weekKey, monthKey, timeBlock, historyEntry) {
+        const blockId = timeBlock.blockId;
+        
+        // Función para inicializar o actualizar bloque
+        const initTimeBlock = (timeBlocks) => {
+            if (!timeBlocks[blockId]) {
+                timeBlocks[blockId] = {
+                    blockId: blockId,
+                    timeRange: `${timeBlock.start}-${timeBlock.end}`,
+                    tasksCompleted: 0,
+                    pomodorosUsed: 0,
+                    breaksTaken: 0,
+                    totalTimeSpent: 0,
+                    tasks: []
+                };
+            }
+        };
+        
+        // Actualizar bloques de tiempo
+        initTimeBlock(this.data.taskHistory.daily[dateKey].timeBlocks);
+        initTimeBlock(this.data.taskHistory.weekly[weekKey].timeBlocks);
+        initTimeBlock(this.data.taskHistory.monthly[monthKey].timeBlocks);
+        
+        // Actualizar estadísticas
+        [this.data.taskHistory.daily[dateKey].timeBlocks[blockId],
+         this.data.taskHistory.weekly[weekKey].timeBlocks[blockId],
+         this.data.taskHistory.monthly[monthKey].timeBlocks[blockId]].forEach(block => {
+            block.tasksCompleted++;
+            block.pomodorosUsed += historyEntry.pomodorosUsed;
+            block.breaksTaken += historyEntry.breaksTaken;
+            block.totalTimeSpent += historyEntry.totalTimeSpent;
+            block.tasks.push(historyEntry);
+        });
+    }
+    
+    // Calcular eficiencia de la tarea
+    calculateTaskEfficiency(activeTask) {
+        if (!activeTask || !activeTask.pomodorosCompleted) return 0;
+        
+        const expectedTime = activeTask.pomodorosCompleted * this.data.pomodoro.settings.workDuration;
+        const actualTime = activeTask.totalTimeSpent || expectedTime;
+        
+        // Eficiencia = tiempo esperado / tiempo real * 100
+        const efficiency = Math.min(100, Math.round((expectedTime / actualTime) * 100));
+        return efficiency;
+    }
+    
+    // Obtener historial por período
+    getHistoryByPeriod(period, date = new Date()) {
+        let key, data;
+        
+        switch (period) {
+            case 'daily':
+                key = this.getDateKey(date);
+                data = this.data.taskHistory.daily[key];
+                break;
+            case 'weekly':
+                key = this.getWeekKey(date);
+                data = this.data.taskHistory.weekly[key];
+                break;
+            case 'monthly':
+                key = this.getMonthKey(date);
+                data = this.data.taskHistory.monthly[key];
+                break;
+            default:
+                return null;
+        }
+        
+        return data || { tasks: [], timeBlocks: {} };
+    }
+    
+    // Mostrar historial en la interfaz
+    showHistory(period = 'daily', date = new Date()) {
+        const history = this.getHistoryByPeriod(period, date);
+        if (!history) return;
+        
+        const historySection = document.getElementById('history');
+        if (!historySection) return;
+        
+        // Crear contenido del historial
+        let historyHTML = `
+            <div class="history-content">
+                <div class="history-header">
+                    <h3>📊 Historial ${this.getPeriodLabel(period)}</h3>
+                    <div class="history-date">${this.formatDateForPeriod(period, date)}</div>
+                </div>
+        `;
+        
+        // Mostrar resumen de tareas
+        if (history.tasks && history.tasks.length > 0) {
+            historyHTML += this.renderTasksHistory(history.tasks);
+        }
+        
+        // Mostrar bloques de tiempo
+        if (history.timeBlocks && Object.keys(history.timeBlocks).length > 0) {
+            historyHTML += this.renderTimeBlocksHistory(history.timeBlocks);
+        }
+        
+        // Si no hay datos
+        if ((!history.tasks || history.tasks.length === 0) && 
+            (!history.timeBlocks || Object.keys(history.timeBlocks).length === 0)) {
+            historyHTML += `
+                <div class="no-history">
+                    <span class="no-history-icon">📝</span>
+                    <p>No hay actividad registrada para este período</p>
+                </div>
+            `;
+        }
+        
+        historyHTML += '</div>';
+        
+        // Actualizar el contenido
+        const existingContent = historySection.querySelector('.history-content');
+        if (existingContent) {
+            existingContent.remove();
+        }
+        historySection.insertAdjacentHTML('beforeend', historyHTML);
+    }
+    
+    // Renderizar historial de tareas
+    renderTasksHistory(tasks) {
+        let html = `
+            <div class="tasks-history">
+                <h4>✅ Tareas Completadas (${tasks.length})</h4>
+                <div class="tasks-list">
+        `;
+        
+        tasks.forEach(task => {
+            html += `
+                <div class="task-history-item">
+                    <div class="task-info">
+                        <span class="task-category-icon">${this.getCategoryIcon(task.category)}</span>
+                        <div class="task-details">
+                            <div class="task-name">${task.taskName}</div>
+                            <div class="task-meta">
+                                <span class="task-points">+${task.points} XP</span>
+                                <span class="task-time">${this.formatTime(task.completedAt)}</span>
+                                <span class="task-block">${task.timeBlock.start}-${task.timeBlock.end}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="task-stats">
+                        <div class="stat-item">
+                            <span class="stat-icon">🍅</span>
+                            <span class="stat-value">${task.pomodorosUsed}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">☕</span>
+                            <span class="stat-value">${task.breaksTaken}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">⏱️</span>
+                            <span class="stat-value">${task.totalTimeSpent}m</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">📊</span>
+                            <span class="stat-value">${task.efficiency}%</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    // Renderizar historial de bloques de tiempo
+    renderTimeBlocksHistory(timeBlocks) {
+        let html = `
+            <div class="time-blocks-history">
+                <h4>⏰ Bloques de Tiempo</h4>
+                <div class="time-blocks-grid">
+        `;
+        
+        // Ordenar bloques por hora
+        const sortedBlocks = Object.values(timeBlocks).sort((a, b) => a.blockId.localeCompare(b.blockId));
+        
+        sortedBlocks.forEach(block => {
+            html += `
+                <div class="time-block-card">
+                    <div class="block-header">
+                        <span class="block-time">${block.timeRange}</span>
+                        <span class="block-tasks">${block.tasksCompleted} tareas</span>
+                    </div>
+                    <div class="block-stats">
+                        <div class="block-stat">
+                            <span class="stat-icon">🍅</span>
+                            <span class="stat-value">${block.pomodorosUsed}</span>
+                        </div>
+                        <div class="block-stat">
+                            <span class="stat-icon">☕</span>
+                            <span class="stat-value">${block.breaksTaken}</span>
+                        </div>
+                        <div class="block-stat">
+                            <span class="stat-icon">⏱️</span>
+                            <span class="stat-value">${block.totalTimeSpent}m</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    // Obtener icono de categoría
+    getCategoryIcon(category) {
+        const icons = {
+            'comunicacion': '💬',
+            'estudiar': '📚',
+            'proyectos': '🚀',
+            'personal': '💪'
+        };
+        return icons[category] || '📝';
+    }
+    
+    // Formatear fecha para el período
+    formatDateForPeriod(period, date) {
+        switch (period) {
+            case 'daily':
+                return date.toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            case 'weekly':
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                return `${weekStart.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+            case 'monthly':
+                return date.toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                });
+            default:
+                return date.toLocaleDateString('es-ES');
+        }
+    }
+    
+    // Obtener etiqueta del período
+    getPeriodLabel(period) {
+        const labels = {
+            'daily': 'Diario',
+            'weekly': 'Semanal',
+            'monthly': 'Mensual'
+        };
+        return labels[period] || 'Historial';
+    }
+    
+    // Formatear tiempo
+    formatTime(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
     }
 
     addExampleTasks() {
@@ -1239,7 +1614,13 @@ class TaskQuestGame {
                     workDuration: 25,
                     breakDuration: 5,
                     longBreakDuration: 15,
-                    pomodorosUntilLongBreak: 4
+                    pomodorosUntilLongBreak: 4,
+                    soundNotifications: {
+                        enabled: true,
+                        workCompleteSound: 'bell',
+                        breakStartSound: 'chime',
+                        longBreakStartSound: 'gong'
+                    }
                 }
             };
             this.saveData();
@@ -1295,6 +1676,32 @@ class TaskQuestGame {
             this.data.pomodoro.settings.pomodorosUntilLongBreak = parseInt(e.target.value);
             this.saveData();
         });
+        
+        // Sound settings listeners
+        document.getElementById('soundNotificationsEnabled').addEventListener('change', (e) => {
+            this.data.pomodoro.settings.soundNotifications.enabled = e.target.checked;
+            this.saveData();
+        });
+        
+        document.getElementById('workCompleteSound').addEventListener('change', (e) => {
+            this.data.pomodoro.settings.soundNotifications.workCompleteSound = e.target.value;
+            this.saveData();
+        });
+        
+        document.getElementById('breakStartSound').addEventListener('change', (e) => {
+            this.data.pomodoro.settings.soundNotifications.breakStartSound = e.target.value;
+            this.saveData();
+        });
+        
+        document.getElementById('longBreakStartSound').addEventListener('change', (e) => {
+            this.data.pomodoro.settings.soundNotifications.longBreakStartSound = e.target.value;
+            this.saveData();
+        });
+        
+        // Test sound button
+        document.getElementById('testSoundBtn').addEventListener('click', () => {
+            this.testAllSounds();
+        });
     }
 
     loadPomodoroSettings() {
@@ -1303,6 +1710,14 @@ class TaskQuestGame {
         document.getElementById('breakDuration').value = settings.breakDuration;
         document.getElementById('longBreakDuration').value = settings.longBreakDuration;
         document.getElementById('pomodorosUntilLongBreak').value = settings.pomodorosUntilLongBreak;
+        
+        // Load sound settings
+        if (settings.soundNotifications) {
+            document.getElementById('soundNotificationsEnabled').checked = settings.soundNotifications.enabled;
+            document.getElementById('workCompleteSound').value = settings.soundNotifications.workCompleteSound;
+            document.getElementById('breakStartSound').value = settings.soundNotifications.breakStartSound;
+            document.getElementById('longBreakStartSound').value = settings.soundNotifications.longBreakStartSound;
+        }
     }
 
     startPomodoro() {
@@ -1805,15 +2220,24 @@ class TaskQuestGame {
         
         const message = messages[Math.floor(Math.random() * messages.length)];
         
+        // Reproducir sonido de finalización de trabajo
+        this.playNotificationSound('workCompleteSound');
+        
         // Mostrar notificación temporal
         this.showNotification(message, 'success');
     }
 
     showBreakNotification() {
+        // Reproducir sonido de inicio de descanso
+        this.playNotificationSound('breakStartSound');
+        
         this.showNotification('¡Hora de descansar! 🧘‍♀️ Tómate 5 minutos', 'info');
     }
 
     showLongBreakNotification() {
+        // Reproducir sonido de inicio de descanso largo
+        this.playNotificationSound('longBreakStartSound');
+        
         this.showNotification('¡Descanso largo! 🎉 Tómate 15 minutos para recargar', 'info');
     }
 
@@ -1854,6 +2278,141 @@ class TaskQuestGame {
                 }
             }, 300);
         }, 3000);
+    }
+
+    // ========== SOUND NOTIFICATIONS ==========
+    
+    playNotificationSound(soundType) {
+        // Verificar si las notificaciones de sonido están habilitadas
+        if (!this.data.pomodoro.settings.soundNotifications.enabled) {
+            return;
+        }
+
+        const soundName = this.data.pomodoro.settings.soundNotifications[soundType];
+        if (!soundName) return;
+
+        // Crear y reproducir el sonido
+        this.playSound(soundName);
+    }
+
+    playSound(soundName) {
+        // Crear un contexto de audio
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Definir los sonidos disponibles
+        const sounds = {
+            bell: this.createBellSound,
+            chime: this.createChimeSound,
+            gong: this.createGongSound,
+            beep: this.createBeepSound,
+            ding: this.createDingSound
+        };
+
+        if (sounds[soundName]) {
+            sounds[soundName](audioContext);
+        }
+    }
+
+    createBellSound(audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.5);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    }
+
+    createChimeSound(audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(2000, audioContext.currentTime + 0.3);
+        
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    createGongSound(audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 1.0);
+        
+        gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.0);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 1.0);
+    }
+
+    createBeepSound(audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+    }
+
+    createDingSound(audioContext) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.4);
+        
+        gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.4);
+    }
+
+    testAllSounds() {
+        const sounds = ['bell', 'chime', 'gong', 'beep', 'ding'];
+        let currentIndex = 0;
+        
+        const playNextSound = () => {
+            if (currentIndex < sounds.length) {
+                this.showNotification(`Probando sonido: ${sounds[currentIndex]}`, 'info');
+                this.playSound(sounds[currentIndex]);
+                currentIndex++;
+                setTimeout(playNextSound, 1000); // 1 segundo entre sonidos
+            } else {
+                this.showNotification('¡Prueba de sonidos completada! 🎵', 'success');
+            }
+        };
+        
+        playNextSound();
     }
 
     // ========== ACTIVE TASK FUNCTIONALITY ==========
@@ -2186,6 +2745,17 @@ class TaskQuestGame {
         this.data.totalCompleted++;
         this.data.completedToday[this.data.activeTask.category]++;
         
+        // Preparar datos para el historial
+        const completionData = {
+            pomodorosUsed: this.data.activeTask.pomodorosCompleted || 0,
+            breaksTaken: this.data.activeTask.breaksTaken || 0,
+            totalTimeSpent: this.data.activeTask.totalTimeSpent || 0,
+            efficiency: this.calculateTaskEfficiency(this.data.activeTask)
+        };
+        
+        // Registrar en el historial
+        this.recordTaskCompletion(task, completionData);
+        
         // Limpiar tarea activa después de completarla
         this.data.activeTask = null;
         
@@ -2420,6 +2990,11 @@ function scrollToSection(sectionId) {
         
         // Actualizar navegación activa
         updateActiveNavigation(sectionId);
+        
+        // Si es la sección de historial, mostrar el historial diario
+        if (sectionId === 'history' && window.game) {
+            window.game.showHistory('daily');
+        }
     }
 }
 
@@ -2437,7 +3012,7 @@ function updateActiveNavigation(activeSection) {
 
 // Función para detectar sección visible (scroll spy)
 function initScrollSpy() {
-    const sections = document.querySelectorAll('[id="categories"], [id="block-time"], [id="daily-stats"], [id="goals"], [id="history"]');
+    const sections = document.querySelectorAll('[id="categories"], [id="block-time"], [id="daily-stats"], [id="stats-history"], [id="history"], [id="goals"]');
     
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -2735,3 +3310,37 @@ const taskErrorCSS = `
 const errorStyle = document.createElement('style');
 errorStyle.textContent = taskErrorCSS;
 document.head.appendChild(errorStyle);
+
+// Funciones para el historial
+function showHistoryTab(period) {
+    if (window.game) {
+        window.game.showHistory(period);
+        
+        // Actualizar botones de pestañas
+        document.querySelectorAll('.history-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[onclick="showHistoryTab('${period}')"]`).classList.add('active');
+    }
+}
+
+function showHistoryDay(date) {
+    if (window.game) {
+        window.game.showHistory('daily', new Date(date));
+    }
+}
+
+function showHistoryWeek(weekKey) {
+    if (window.game) {
+        // Convertir weekKey a fecha
+        const [year, week] = weekKey.split('-W');
+        const date = new Date(year, 0, 1);
+        const weekStart = new Date(date.getTime() + (parseInt(week) - 1) * 7 * 24 * 60 * 60 * 1000);
+        window.game.showHistory('weekly', weekStart);
+    }
+}
+
+function showHistoryMonth(year, month) {
+    if (window.game) {
+        const date = new Date(year, month - 1, 1);
+        window.game.showHistory('monthly', date);
+    }
+}

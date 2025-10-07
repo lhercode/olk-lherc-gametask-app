@@ -110,13 +110,17 @@
                 <span class="nav-icon">📊</span>
                 <span class="nav-text">Estadísticas</span>
             </button>
+            <button class="nav-btn" onclick="scrollToSection('stats-history')" data-section="stats-history">
+                <span class="nav-icon">📈</span>
+                <span class="nav-text">Histórico</span>
+            </button>
+            <button class="nav-btn" onclick="scrollToSection('history')" data-section="history">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Historial</span>
+            </button>
             <button class="nav-btn" onclick="scrollToSection('goals')" data-section="goals">
                 <span class="nav-icon">🎯</span>
                 <span class="nav-text">Metas</span>
-            </button>
-            <button class="nav-btn" onclick="scrollToSection('history')" data-section="history">
-                <span class="nav-icon">📈</span>
-                <span class="nav-text">Historial</span>
             </button>
         </nav>
 
@@ -281,6 +285,52 @@
                         </select>
                     </div>
                 </div>
+                
+                <!-- Configuración de Sonidos -->
+                <div class="sound-settings">
+                    <h4>🔊 Notificaciones de Sonido</h4>
+                    <div class="sound-settings-grid">
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="soundNotificationsEnabled" checked>
+                                Activar notificaciones de sonido
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label for="workCompleteSound">Sonido al completar trabajo:</label>
+                            <select id="workCompleteSound">
+                                <option value="bell" selected>🔔 Campana</option>
+                                <option value="chime">🎵 Campanilla</option>
+                                <option value="gong">🔔 Gong</option>
+                                <option value="beep">📢 Beep</option>
+                                <option value="ding">🔔 Ding</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="breakStartSound">Sonido al iniciar descanso:</label>
+                            <select id="breakStartSound">
+                                <option value="bell">🔔 Campana</option>
+                                <option value="chime" selected>🎵 Campanilla</option>
+                                <option value="gong">🔔 Gong</option>
+                                <option value="beep">📢 Beep</option>
+                                <option value="ding">🔔 Ding</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="longBreakStartSound">Sonido al iniciar descanso largo:</label>
+                            <select id="longBreakStartSound">
+                                <option value="bell">🔔 Campana</option>
+                                <option value="chime">🎵 Campanilla</option>
+                                <option value="gong" selected>🔔 Gong</option>
+                                <option value="beep">📢 Beep</option>
+                                <option value="ding">🔔 Ding</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <button id="testSoundBtn" class="test-sound-btn">🎵 Probar Sonidos</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -431,7 +481,7 @@
         </div>
 
         <!-- Estadísticas Históricas -->
-        <div class="stats-history-section" id="history">
+        <div class="stats-history-section" id="stats-history">
             <h2>📊 Estadísticas Históricas</h2>
             <div class="stats-tabs">
                 <button class="tab-btn active" onclick="showStatsTab('week')">Semana</button>
@@ -502,6 +552,19 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Historial de Tareas -->
+        <div class="stats-history-section" id="history">
+            <h2>📈 Historial de Tareas</h2>
+            <div class="history-tabs">
+                <button class="history-tab-btn active" onclick="showHistoryTab('daily')">📅 Día</button>
+                <button class="history-tab-btn" onclick="showHistoryTab('weekly')">📊 Semana</button>
+                <button class="history-tab-btn" onclick="showHistoryTab('monthly')">📆 Mes</button>
+            </div>
+            <div class="history-content">
+                <!-- El contenido se genera dinámicamente por JavaScript -->
             </div>
         </div>
 
