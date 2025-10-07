@@ -3800,6 +3800,25 @@ function debug5Minutes() {
     }
 }
 
+// Función debug para probar el flujo completo de pomodoro
+function debugPomodoroFlow() {
+    if (window.game) {
+        console.log('🐛 Modo Debug: Probando flujo completo de pomodoro...');
+        
+        // Establecer 10 segundos para testing rápido
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        console.log('✅ Timer establecido a 10 segundos para testing');
+        console.log('📊 Estado actual:', window.game.pomodoroState);
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
 // Funciones globales de fallback para los botones del pomodoro
 function startPomodoroGlobal() {
     console.log('▶️ startPomodoroGlobal() llamado');
