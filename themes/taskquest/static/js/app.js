@@ -2091,6 +2091,15 @@ class TaskQuestGame {
             this.pomodoroState.timeLeft = 0;
             this.updateTimerDisplay();
             
+            // DETENER EL TIMER INMEDIATAMENTE
+            if (this.pomodoroState.intervalId) {
+                clearInterval(this.pomodoroState.intervalId);
+                this.pomodoroState.intervalId = null;
+            }
+            
+            // Marcar como no corriendo inmediatamente
+            this.pomodoroState.isRunning = false;
+            
             // Solo completar si no se está completando ya
             if (!this.pomodoroState.isCompleting) {
                 this.completePomodoroSession();
@@ -2112,6 +2121,7 @@ class TaskQuestGame {
             this.pomodoroState.intervalId = null;
         }
         
+        // Asegurar que el timer esté completamente detenido
         this.pomodoroState.isRunning = false;
         this.pomodoroState.startTime = null;
         this.pomodoroState.pausedTime = null;
@@ -2120,7 +2130,7 @@ class TaskQuestGame {
         // Cambiar botón de pausar a iniciar inmediatamente
         this.updatePomodoroButtons();
         
-        console.log('🛑 Pomodoro session completada, intervalo limpiado');
+        console.log('🛑 Pomodoro session completada, timer detenido, botón cambiado a "Iniciar"');
         
         if (this.pomodoroState.currentMode === 'work') {
             this.completeWorkSession();
@@ -4360,6 +4370,63 @@ function debugAllNotifications() {
         
         console.log('✅ Todas las notificaciones serán probadas en secuencia');
         console.log('🔊 Escucha los sonidos correspondientes a cada notificación');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar detención del timer
+function debugTimerStop() {
+    if (window.game) {
+        console.log('⏱️ Debug: Probando detención del timer...');
+        
+        // Configurar un timer de 5 segundos para testing rápido
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.timeLeft = 5;
+        window.game.pomodoroState.totalTime = 5;
+        window.game.pomodoroState.isRunning = false;
+        window.game.pomodoroState.isPaused = false;
+        window.game.pomodoroState.isCompleting = false;
+        window.game.pomodoroState.lastTickTime = Date.now();
+        
+        // Limpiar intervalos existentes
+        if (window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        // Actualizar displays
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        // Mostrar botón iniciar
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Timer configurado a 5 segundos para testing');
+        console.log('💡 Presiona "Iniciar" para probar la detención automática');
+        console.log('🎯 El timer debería detenerse automáticamente en 5 segundos');
+        console.log('🔘 El botón debería cambiar a "Iniciar" automáticamente');
+        
+        // Monitorear el estado del timer
+        const monitorInterval = setInterval(() => {
+            if (window.game.pomodoroState) {
+                console.log(`⏱️ Timer: ${window.game.pomodoroState.timeLeft}s, Running: ${window.game.pomodoroState.isRunning}, Interval: ${window.game.pomodoroState.intervalId ? 'ACTIVO' : 'DETENIDO'}`);
+                
+                // Detener monitoreo si el timer se detiene
+                if (!window.game.pomodoroState.isRunning && !window.game.pomodoroState.intervalId) {
+                    clearInterval(monitorInterval);
+                    console.log('✅ Timer detenido correctamente');
+                }
+            }
+        }, 1000);
+        
+        // Limpiar monitoreo después de 10 segundos
+        setTimeout(() => {
+            clearInterval(monitorInterval);
+        }, 10000);
     } else {
         console.error('❌ Game instance not found');
     }
