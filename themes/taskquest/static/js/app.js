@@ -1791,11 +1791,12 @@ class TaskQuestGame {
                     pomodorosUntilLongBreak: 4,
                     soundNotifications: {
                         enabled: true,
-                        workCompleteSound: 'bell',
-                        workStartSound: 'bell',
-                        breakStartSound: 'chime',
-                        breakEndSound: 'bell',
-                        longBreakStartSound: 'gong'
+                        workCompleteSound: 'bell',        // Sonido al terminar trabajo
+                        workStartSound: 'ding',           // Sonido al iniciar trabajo
+                        breakStartSound: 'chime',         // Sonido al iniciar descanso corto
+                        breakEndSound: 'ding',            // Sonido al terminar descanso corto
+                        longBreakStartSound: 'gong',      // Sonido al iniciar descanso largo
+                        longBreakEndSound: 'bell'         // Sonido al terminar descanso largo
                     }
                 }
             };
@@ -1806,11 +1807,12 @@ class TaskQuestGame {
         if (!this.data.pomodoro.settings.soundNotifications) {
             this.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
-                workCompleteSound: 'bell',
-                workStartSound: 'bell',
-                breakStartSound: 'chime',
-                breakEndSound: 'bell',
-                longBreakStartSound: 'gong'
+                workCompleteSound: 'bell',        // Sonido al terminar trabajo
+                workStartSound: 'ding',           // Sonido al iniciar trabajo
+                breakStartSound: 'chime',         // Sonido al iniciar descanso corto
+                breakEndSound: 'ding',            // Sonido al terminar descanso corto
+                longBreakStartSound: 'gong',      // Sonido al iniciar descanso largo
+                longBreakEndSound: 'bell'         // Sonido al terminar descanso largo
             };
             this.saveData();
         }
@@ -1957,9 +1959,13 @@ class TaskQuestGame {
     }
 
     startPomodoro() {
+        console.log('▶️ Iniciando pomodoro...');
+        
         if (this.pomodoroState.isPaused) {
+            console.log('🔄 Reanudando pomodoro pausado...');
             this.resumePomodoro();
         } else {
+            console.log('🚀 Iniciando nuevo pomodoro...');
             this.pomodoroState.isRunning = true;
             this.pomodoroState.isPaused = false;
             this.pomodoroState.startTime = Date.now();
@@ -1968,31 +1974,44 @@ class TaskQuestGame {
             this.pomodoroState.lastTickTime = Date.now();
             this.pomodoroState.intervalId = setInterval(() => this.tick(), 100); // Más frecuente para suavidad
             
+            // Cambiar botones: ocultar iniciar, mostrar pausar
             const startBtn = document.getElementById('startBtn');
             const pauseBtn = document.getElementById('pauseBtn');
             if (startBtn) startBtn.style.display = 'none';
             if (pauseBtn) pauseBtn.style.display = 'block';
             
+            console.log('✅ Pomodoro iniciado - Botón cambiado a "Pausar"');
             this.updateTimerDisplay();
             this.savePomodoroState();
         }
     }
 
     pausePomodoro() {
+        console.log('⏸️ Pausando pomodoro...');
+        
         this.pomodoroState.isPaused = true;
         this.pomodoroState.isRunning = false;
         this.pomodoroState.pausedTime = Date.now();
-        clearInterval(this.pomodoroState.intervalId);
         
+        // Limpiar el intervalo del timer
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Cambiar botones: mostrar iniciar, ocultar pausar
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
         
+        console.log('✅ Pomodoro pausado - Botón cambiado a "Iniciar"');
         this.savePomodoroState();
     }
 
     resumePomodoro() {
+        console.log('🔄 Reanudando pomodoro...');
+        
         this.pomodoroState.isRunning = true;
         this.pomodoroState.isPaused = false;
         
@@ -2001,16 +2020,19 @@ class TaskQuestGame {
             const pausedDuration = Math.floor((Date.now() - this.pomodoroState.pausedTime) / 1000);
             this.pomodoroState.totalPausedTime += pausedDuration;
             this.pomodoroState.pausedTime = null;
+            console.log(`⏱️ Tiempo pausado: ${pausedDuration} segundos`);
         }
         
         this.pomodoroState.lastTickTime = Date.now();
         this.pomodoroState.intervalId = setInterval(() => this.tick(), 100); // Más frecuente para suavidad
         
+        // Cambiar botones: ocultar iniciar, mostrar pausar
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         if (startBtn) startBtn.style.display = 'none';
         if (pauseBtn) pauseBtn.style.display = 'block';
         
+        console.log('✅ Pomodoro reanudado - Botón cambiado a "Pausar"');
         this.savePomodoroState();
     }
 
@@ -2094,6 +2116,9 @@ class TaskQuestGame {
         this.pomodoroState.startTime = null;
         this.pomodoroState.pausedTime = null;
         this.pomodoroState.totalPausedTime = 0;
+        
+        // Cambiar botón de pausar a iniciar inmediatamente
+        this.updatePomodoroButtons();
         
         console.log('🛑 Pomodoro session completada, intervalo limpiado');
         
@@ -2182,8 +2207,12 @@ class TaskQuestGame {
         // Actualizar requisitos de tarea activa
         this.updateTaskRequirements();
         
-        // Mostrar notificación de fin de descanso
-        this.showBreakEndNotification();
+        // Mostrar notificación de fin de descanso según el tipo
+        if (this.pomodoroState.currentMode === 'longBreak') {
+            this.showLongBreakEndNotification();
+        } else {
+            this.showBreakEndNotification();
+        }
         
         // Cambiar botón de pausa a iniciar y preparar para iniciación manual
         this.updatePomodoroButtons();
@@ -2214,6 +2243,9 @@ class TaskQuestGame {
         const pauseBtn = document.getElementById('pauseBtn');
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        // Reproducir sonido de inicio de trabajo
+        this.playNotificationSound('workStartSound');
         
         console.log('✅ Sesión de trabajo preparada - Presiona "Iniciar" para comenzar');
     }
@@ -2731,6 +2763,13 @@ class TaskQuestGame {
         this.showNotification('¡Descanso terminado! 🚀 Hora de volver al trabajo', 'success');
     }
 
+    showLongBreakEndNotification() {
+        // Reproducir sonido de fin de descanso largo
+        this.playNotificationSound('longBreakEndSound');
+        
+        this.showNotification('¡Descanso largo terminado! 🎉 Hora de volver al trabajo', 'success');
+    }
+
     showNotification(message, type = 'info') {
         // Crear elemento de notificación
         const notification = document.createElement('div');
@@ -2779,11 +2818,12 @@ class TaskQuestGame {
         if (!this.data.pomodoro.settings.soundNotifications) {
             this.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
-                workCompleteSound: 'bell',
-                workStartSound: 'bell',
-                breakStartSound: 'chime',
-                breakEndSound: 'bell',
-                longBreakStartSound: 'gong'
+                workCompleteSound: 'bell',        // Sonido al terminar trabajo
+                workStartSound: 'ding',           // Sonido al iniciar trabajo
+                breakStartSound: 'chime',         // Sonido al iniciar descanso corto
+                breakEndSound: 'ding',            // Sonido al terminar descanso corto
+                longBreakStartSound: 'gong',      // Sonido al iniciar descanso largo
+                longBreakEndSound: 'bell'         // Sonido al terminar descanso largo
             };
             this.saveData();
         }
@@ -3948,11 +3988,12 @@ function fixSoundSettings() {
         if (!window.game.data.pomodoro.settings.soundNotifications) {
             window.game.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
-                workCompleteSound: 'bell',
-                workStartSound: 'bell',
-                breakStartSound: 'chime',
-                breakEndSound: 'bell',
-                longBreakStartSound: 'gong'
+                workCompleteSound: 'bell',        // Sonido al terminar trabajo
+                workStartSound: 'ding',           // Sonido al iniciar trabajo
+                breakStartSound: 'chime',         // Sonido al iniciar descanso corto
+                breakEndSound: 'ding',            // Sonido al terminar descanso corto
+                longBreakStartSound: 'gong',      // Sonido al iniciar descanso largo
+                longBreakEndSound: 'bell'         // Sonido al terminar descanso largo
             };
         }
         
@@ -4083,7 +4124,7 @@ function debugSounds() {
         console.log('🔊 Probando todos los sonidos...');
         
         // Probar cada tipo de sonido
-        const sounds = ['workCompleteSound', 'workStartSound', 'breakStartSound', 'breakEndSound', 'longBreakStartSound'];
+        const sounds = ['workCompleteSound', 'workStartSound', 'breakStartSound', 'breakEndSound', 'longBreakStartSound', 'longBreakEndSound'];
         
         sounds.forEach((sound, index) => {
             setTimeout(() => {
@@ -4305,14 +4346,64 @@ function debugAllNotifications() {
             window.game.showLongBreakNotification();
         }, 5000);
         
-        // Probar notificación de fin de descanso
+        // Probar notificación de fin de descanso corto
         setTimeout(() => {
-            console.log('🚀 Probando notificación de fin de descanso...');
+            console.log('🚀 Probando notificación de fin de descanso corto...');
             window.game.showBreakEndNotification();
         }, 7000);
         
+        // Probar notificación de fin de descanso largo
+        setTimeout(() => {
+            console.log('🎉 Probando notificación de fin de descanso largo...');
+            window.game.showLongBreakEndNotification();
+        }, 9000);
+        
         console.log('✅ Todas las notificaciones serán probadas en secuencia');
         console.log('🔊 Escucha los sonidos correspondientes a cada notificación');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar funcionalidad de botones
+function debugButtons() {
+    if (window.game) {
+        console.log('🔘 Debug: Probando funcionalidad de botones...');
+        
+        // Verificar que los botones existan
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        
+        if (!startBtn) {
+            console.error('❌ Botón "Iniciar" no encontrado');
+            return;
+        }
+        
+        if (!pauseBtn) {
+            console.error('❌ Botón "Pausar" no encontrado');
+            return;
+        }
+        
+        console.log('✅ Botones encontrados');
+        console.log('📊 Estado actual de botones:');
+        console.log('  - Iniciar visible:', startBtn.style.display !== 'none');
+        console.log('  - Pausar visible:', pauseBtn.style.display !== 'none');
+        console.log('📊 Estado del pomodoro:');
+        console.log('  - Ejecutándose:', window.game.pomodoroState.isRunning);
+        console.log('  - Pausado:', window.game.pomodoroState.isPaused);
+        console.log('  - Completando:', window.game.pomodoroState.isCompleting);
+        
+        // Probar cambio de botones
+        console.log('🔄 Probando cambio de botones...');
+        window.game.updatePomodoroButtons();
+        
+        setTimeout(() => {
+            console.log('📊 Estado después de updatePomodoroButtons():');
+            console.log('  - Iniciar visible:', startBtn.style.display !== 'none');
+            console.log('  - Pausar visible:', pauseBtn.style.display !== 'none');
+        }, 100);
+        
+        console.log('💡 Usa startPomodoro() y pausePomodoro() para probar funcionalidad');
     } else {
         console.error('❌ Game instance not found');
     }
@@ -4338,9 +4429,10 @@ function debugPomodoroState() {
             console.log('  - Habilitados:', window.game.data.pomodoro.settings.soundNotifications.enabled);
             console.log('  - Sonido trabajo completo:', window.game.data.pomodoro.settings.soundNotifications.workCompleteSound);
             console.log('  - Sonido inicio trabajo:', window.game.data.pomodoro.settings.soundNotifications.workStartSound);
-            console.log('  - Sonido inicio descanso:', window.game.data.pomodoro.settings.soundNotifications.breakStartSound);
-            console.log('  - Sonido fin descanso:', window.game.data.pomodoro.settings.soundNotifications.breakEndSound);
-            console.log('  - Sonido descanso largo:', window.game.data.pomodoro.settings.soundNotifications.longBreakStartSound);
+            console.log('  - Sonido inicio descanso corto:', window.game.data.pomodoro.settings.soundNotifications.breakStartSound);
+            console.log('  - Sonido fin descanso corto:', window.game.data.pomodoro.settings.soundNotifications.breakEndSound);
+            console.log('  - Sonido inicio descanso largo:', window.game.data.pomodoro.settings.soundNotifications.longBreakStartSound);
+            console.log('  - Sonido fin descanso largo:', window.game.data.pomodoro.settings.soundNotifications.longBreakEndSound);
         }
     } else {
         console.error('❌ Game instance o pomodoroState not found');
