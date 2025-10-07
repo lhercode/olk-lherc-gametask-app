@@ -2186,6 +2186,14 @@ class TaskQuestGame {
         // Mostrar celebración
         this.showPomodoroCelebration();
         
+        // Verificar si está en modo debug
+        if (this.pomodoroState.debugMode) {
+            console.log('🛑 MODO DEBUG: Ciclo de trabajo terminado - SE DETIENE COMPLETAMENTE');
+            console.log('✅ No se prepara el siguiente ciclo automáticamente');
+            this.pomodoroState.debugMode = false; // Resetear flag
+            return; // Salir sin preparar siguiente ciclo
+        }
+        
         // Determinar siguiente fase y preparar para iniciación manual
         console.log(`🔄 Preparando descanso... (Pomodoro ${this.pomodoroState.pomodoroCount})`);
         if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
@@ -2222,6 +2230,15 @@ class TaskQuestGame {
             this.showLongBreakEndNotification();
         } else {
             this.showBreakEndNotification();
+        }
+        
+        // Verificar si está en modo debug
+        if (this.pomodoroState.debugMode) {
+            console.log('🛑 MODO DEBUG: Ciclo de descanso terminado - SE DETIENE COMPLETAMENTE');
+            console.log('✅ No se prepara el siguiente ciclo automáticamente');
+            this.pomodoroState.debugMode = false; // Resetear flag
+            this.updatePomodoroButtons(); // Solo cambiar botón
+            return; // Salir sin preparar siguiente ciclo
         }
         
         // Cambiar botón de pausa a iniciar y preparar para iniciación manual
@@ -4179,10 +4196,10 @@ function resetPomodoroGlobal() {
 
 // ========== FUNCIONES DEBUG PARA 10 SEGUNDOS ==========
 
-// Función debug para probar ciclo de trabajo (10 segundos)
+// Función debug para probar ciclo de trabajo (10 segundos) - SE DETIENE AL TERMINAR
 function debugWork10s() {
     if (window.game) {
-        console.log('🚀 Debug: Configurando ciclo de TRABAJO (10 segundos)...');
+        console.log('🚀 Debug: Configurando ciclo de TRABAJO (10 segundos) - SE DETIENE AL TERMINAR...');
         
         // Configurar estado para trabajo
         window.game.pomodoroState.currentMode = 'work';
@@ -4209,9 +4226,13 @@ function debugWork10s() {
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
         
+        // Marcar como modo debug para que se detenga al terminar
+        window.game.pomodoroState.debugMode = true;
+        
         console.log('✅ Ciclo de TRABAJO configurado (10s)');
         console.log('💡 Presiona "Iniciar" para comenzar el ciclo de trabajo');
-        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de descanso');
+        console.log('🛑 Al terminar: SE DETIENE COMPLETAMENTE - NO continúa al siguiente ciclo');
+        console.log('🎯 Solo notificación y sonido, luego se detiene');
     } else {
         console.error('❌ Game instance not found');
     }
@@ -4247,9 +4268,13 @@ function debugBreak10s() {
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
         
+        // Marcar como modo debug para que se detenga al terminar
+        window.game.pomodoroState.debugMode = true;
+        
         console.log('✅ Ciclo de DESCANSO CORTO configurado (10s)');
         console.log('💡 Presiona "Iniciar" para comenzar el descanso corto');
-        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de trabajo');
+        console.log('🛑 Al terminar: SE DETIENE COMPLETAMENTE - NO continúa al siguiente ciclo');
+        console.log('🎯 Solo notificación y sonido, luego se detiene');
     } else {
         console.error('❌ Game instance not found');
     }
@@ -4285,9 +4310,13 @@ function debugLongBreak10s() {
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
         
+        // Marcar como modo debug para que se detenga al terminar
+        window.game.pomodoroState.debugMode = true;
+        
         console.log('✅ Ciclo de DESCANSO LARGO configurado (10s)');
         console.log('💡 Presiona "Iniciar" para comenzar el descanso largo');
-        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de trabajo');
+        console.log('🛑 Al terminar: SE DETIENE COMPLETAMENTE - NO continúa al siguiente ciclo');
+        console.log('🎯 Solo notificación y sonido, luego se detiene');
     } else {
         console.error('❌ Game instance not found');
     }
