@@ -3731,6 +3731,55 @@ function fixSoundSettings() {
     }
 }
 
+// Función debug para establecer 30 segundos en el timer
+function debug30Seconds() {
+    if (window.game) {
+        console.log('🐛 Modo Debug: Estableciendo 30 segundos...');
+        
+        // Establecer 30 segundos en el timer actual
+        if (window.game.pomodoroState) {
+            window.game.pomodoroState.timeLeft = 30;
+            window.game.pomodoroState.totalTime = 30;
+            window.game.updateTimerDisplay();
+            window.game.updatePomodoroDisplay();
+            console.log('✅ Timer establecido a 30 segundos');
+        } else {
+            console.error('❌ Pomodoro state not found');
+        }
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para cambiar duración de trabajo a 5 minutos
+function debug5Minutes() {
+    if (window.game) {
+        console.log('🐛 Modo Debug: Cambiando duración de trabajo a 5 minutos...');
+        
+        // Cambiar configuración a 5 minutos
+        window.game.data.pomodoro.settings.workDuration = 5;
+        window.game.saveData();
+        
+        // Actualizar selector en la interfaz
+        const workDurationSelect = document.getElementById('workDuration');
+        if (workDurationSelect) {
+            workDurationSelect.value = '5';
+        }
+        
+        // Si no hay pomodoro corriendo, actualizar el timer
+        if (!window.game.pomodoroState.isRunning) {
+            window.game.pomodoroState.timeLeft = 5 * 60; // 5 minutos en segundos
+            window.game.pomodoroState.totalTime = 5 * 60;
+            window.game.updateTimerDisplay();
+            window.game.updatePomodoroDisplay();
+        }
+        
+        console.log('✅ Duración de trabajo cambiada a 5 minutos');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
 // Funciones globales de fallback para los botones del pomodoro
 function startPomodoroGlobal() {
     console.log('▶️ startPomodoroGlobal() llamado');
