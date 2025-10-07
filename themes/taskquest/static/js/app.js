@@ -2944,6 +2944,14 @@ class TaskQuestGame {
         this.showNotification(`🎯 Tarea activa: ${task.name}\n⏰ Bloque: ${timeBlock}\n🔄 Contadores reiniciados`, 'info');
     }
     
+    // Cerrar el selector de tareas
+    closeTaskSelector() {
+        const modal = document.getElementById('taskSelectorModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
     // Calcular bloque de tiempo (ej: 9:00-9:30, 9:30-10:00)
     calculateTimeBlock(date) {
         const hours = date.getHours();
