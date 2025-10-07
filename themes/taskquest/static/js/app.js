@@ -2161,6 +2161,15 @@ class TaskQuestGame {
     completeBreakSession() {
         console.log('☕ Completando sesión de descanso...');
         
+        // Limpiar el intervalo del timer ANTES de cambiar el estado
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Marcar como no corriendo para detener el tick
+        this.pomodoroState.isRunning = false;
+        
         // Incrementar contador específico de la tarea activa
         if (this.data.activeTask) {
             this.data.activeTask.breaksTaken++;
@@ -2207,6 +2216,16 @@ class TaskQuestGame {
 
     startBreak() {
         console.log('☕ Iniciando descanso corto...');
+        
+        // Limpiar el intervalo del timer ANTES de cambiar el estado
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Marcar como no corriendo para detener el tick
+        this.pomodoroState.isRunning = false;
+        
         this.pomodoroState.currentMode = 'break';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.breakDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.breakDuration * 60;
@@ -2225,6 +2244,16 @@ class TaskQuestGame {
 
     startLongBreak() {
         console.log('🎉 Iniciando descanso largo...');
+        
+        // Limpiar el intervalo del timer ANTES de cambiar el estado
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Marcar como no corriendo para detener el tick
+        this.pomodoroState.isRunning = false;
+        
         this.pomodoroState.currentMode = 'longBreak';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.longBreakDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.longBreakDuration * 60;
@@ -2607,7 +2636,7 @@ class TaskQuestGame {
 
     showBreakEndNotification() {
         // Reproducir sonido de fin de descanso
-        this.playNotificationSound('workStartSound');
+        this.playNotificationSound('breakEndSound');
         
         this.showNotification('¡Descanso terminado! 🚀 Hora de volver al trabajo', 'success');
     }
@@ -2663,6 +2692,7 @@ class TaskQuestGame {
                 workCompleteSound: 'bell',
                 workStartSound: 'bell',
                 breakStartSound: 'chime',
+                breakEndSound: 'bell',
                 longBreakStartSound: 'gong'
             };
             this.saveData();
@@ -3811,7 +3841,9 @@ function fixSoundSettings() {
             window.game.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
                 workCompleteSound: 'bell',
+                workStartSound: 'bell',
                 breakStartSound: 'chime',
+                breakEndSound: 'bell',
                 longBreakStartSound: 'gong'
             };
         }
@@ -3943,7 +3975,7 @@ function debugSounds() {
         console.log('🔊 Probando todos los sonidos...');
         
         // Probar cada tipo de sonido
-        const sounds = ['workCompleteSound', 'workStartSound', 'breakStartSound', 'longBreakStartSound'];
+        const sounds = ['workCompleteSound', 'workStartSound', 'breakStartSound', 'breakEndSound', 'longBreakStartSound'];
         
         sounds.forEach((sound, index) => {
             setTimeout(() => {
