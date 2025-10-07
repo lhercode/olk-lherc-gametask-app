@@ -5193,3 +5193,55 @@ button, .btn, .nav-btn, .rest-btn, .rest-btn-compact {
         font-size: 0.85rem;
     }
 }
+
+/* ========== VERSION DISPLAY ========== */
+.app-version {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(108, 99, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(108, 99, 255, 0.2);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.app-version:hover {
+    background: rgba(108, 99, 255, 0.15);
+    border-color: rgba(108, 99, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.version-label {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.version-number {
+    color: #6C63FF;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+/* Responsive para versión */
+@media (max-width: 768px) {
+    .app-version {
+        bottom: 15px;
+        right: 15px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    
+    .version-number {
+        font-size: 10px;
+    }
+}
