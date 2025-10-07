@@ -60,6 +60,12 @@ class TaskQuestGame {
             clearInterval(this.pomodoroState.intervalId);
         }
         
+        // Limpiar estado de completado
+        if (this.pomodoroState) {
+            this.pomodoroState.isCompleting = false;
+            this.pomodoroState.isRunning = false;
+        }
+        
         // Reinicializar completamente
         this.initPomodoro();
         this.updatePomodoroDisplay();
@@ -1797,6 +1803,7 @@ class TaskQuestGame {
         this.pomodoroState = {
             isRunning: false,
             isPaused: false,
+            isCompleting: false, // Flag para prevenir bucles
             currentMode: 'work', // 'work', 'break', 'longBreak'
             timeLeft: this.data.pomodoro.settings.workDuration * 60, // en segundos
             totalTime: this.data.pomodoro.settings.workDuration * 60,
@@ -2014,6 +2021,11 @@ class TaskQuestGame {
     }
 
     tick() {
+        // Prevenir ejecución si ya se está completando
+        if (this.pomodoroState.isCompleting) {
+            return;
+        }
+        
         if (this.pomodoroState.timeLeft > 0) {
             this.pomodoroState.timeLeft--;
             this.updateTimerDisplay();
@@ -2023,11 +2035,21 @@ class TaskQuestGame {
                 this.savePomodoroState();
             }
         } else {
-            this.completePomodoroSession();
+            // Solo completar si no se está completando ya
+            if (!this.pomodoroState.isCompleting) {
+                this.completePomodoroSession();
+            }
         }
     }
 
     completePomodoroSession() {
+        // Prevenir ejecución múltiple
+        if (this.pomodoroState.isCompleting) {
+            return;
+        }
+        
+        this.pomodoroState.isCompleting = true;
+        
         clearInterval(this.pomodoroState.intervalId);
         this.pomodoroState.isRunning = false;
         this.pomodoroState.startTime = null;
@@ -2045,17 +2067,44 @@ class TaskQuestGame {
         this.updateGoalMultipliers();
         this.saveData();
         this.savePomodoroState();
+        
+        // Resetear flag después de un delay
+        setTimeout(() => {
+            this.pomodoroState.isCompleting = false;
+        }, 2000);
     }
 
     completeWorkSession() {
+        // Prevenir ejecución múltiple
+        if (this.pomodoroState.isCompleting) {
+            return;
+        }
+        this.pomodoroState.isCompleting = true;
+        
         this.pomodoroState.pomodoroCount++;
         this.data.pomodoro.pomodorosToday++;
         this.data.pomodoro.focusTimeToday += this.data.pomodoro.settings.workDuration;
         
+        // Incrementar contador específico de la tarea activa
+        if (this.data.activeTask) {
+            this.data.activeTask.pomodorosCompleted = (this.data.activeTask.pomodorosCompleted || 0) + 1;
+        }
+        
         // Ganar puntos por completar un pomodoro
-        this.data.points += 15;
+        let pointsEarned = 15;
+        
+        // Bonus extra si hay tarea activa
+        if (this.data.activeTask) {
+            pointsEarned += 5; // Bonus por tener tarea activa
+            this.showNotification(`🎯 +5 XP bonus por tarea activa!`, 'success');
+        }
+        
+        this.data.points += pointsEarned;
         this.updateStats();
         this.updateProgress();
+        
+        // Actualizar requisitos de tarea activa
+        this.updateTaskRequirements();
         
         // Mostrar celebración
         this.showPomodoroCelebration();
@@ -2066,6 +2115,11 @@ class TaskQuestGame {
         } else {
             this.startBreak();
         }
+        
+        // Resetear flag después de un delay
+        setTimeout(() => {
+            this.pomodoroState.isCompleting = false;
+        }, 1000);
     }
 
     completeBreakSession() {
@@ -3014,47 +3068,6 @@ class TaskQuestGame {
         // Mostrar notificación de éxito
         this.showNotification(`🎉 ¡Tarea completada! +${task.points} XP`, 'success');
     }
-    
-    // Bonus XP por completar tarea activa durante Pomodoro
-    completeWorkSession() {
-        this.pomodoroState.pomodoroCount++;
-        this.data.pomodoro.pomodorosToday++;
-        this.data.pomodoro.focusTimeToday += this.data.pomodoro.settings.workDuration;
-        
-        // Incrementar contador específico de la tarea activa
-        if (this.data.activeTask) {
-            this.data.activeTask.pomodorosCompleted++;
-        }
-        
-        // Ganar puntos por completar un pomodoro
-        let pointsEarned = 15;
-        
-        // Bonus extra si hay tarea activa
-        if (this.data.activeTask) {
-            pointsEarned += 5; // Bonus por tener tarea activa
-            this.showNotification(`🎯 +5 XP bonus por tarea activa!`, 'success');
-        }
-        
-        this.data.points += pointsEarned;
-        this.updateStats();
-        this.updateProgress();
-        
-        // Actualizar requisitos de tarea activa
-        this.updateTaskRequirements();
-        
-        // Cambiar botón de pausa a iniciar
-        this.updatePomodoroButtons();
-        
-        // Mostrar celebración
-        this.showPomodoroCelebration();
-        
-        // Determinar siguiente fase
-        if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
-            this.startLongBreak();
-        } else {
-            this.startBreak();
-        }
-    }
 
     // Actualizar estadísticas diarias
     updateDailyStats() {
@@ -3640,6 +3653,29 @@ function fixDataStructure() {
         // Guardar datos reparados
         window.game.saveData();
         console.log('✅ Estructura de datos reparada');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función global para detener bucles del pomodoro
+function stopPomodoroLoop() {
+    if (window.game) {
+        console.log('🛑 Deteniendo bucles del Pomodoro...');
+        
+        // Limpiar intervalos
+        if (window.game.pomodoroState && window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+        }
+        
+        // Resetear flags
+        if (window.game.pomodoroState) {
+            window.game.pomodoroState.isCompleting = false;
+            window.game.pomodoroState.isRunning = false;
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        console.log('✅ Bucles detenidos');
     } else {
         console.error('❌ Game instance not found');
     }
