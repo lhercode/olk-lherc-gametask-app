@@ -1792,7 +1792,9 @@ class TaskQuestGame {
                     soundNotifications: {
                         enabled: true,
                         workCompleteSound: 'bell',
+                        workStartSound: 'bell',
                         breakStartSound: 'chime',
+                        breakEndSound: 'bell',
                         longBreakStartSound: 'gong'
                     }
                 }
@@ -1805,7 +1807,9 @@ class TaskQuestGame {
             this.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
                 workCompleteSound: 'bell',
+                workStartSound: 'bell',
                 breakStartSound: 'chime',
+                breakEndSound: 'bell',
                 longBreakStartSound: 'gong'
             };
             this.saveData();
@@ -2147,14 +2151,14 @@ class TaskQuestGame {
         // Mostrar celebración
         this.showPomodoroCelebration();
         
-        // Determinar siguiente fase
-        console.log(`🔄 Iniciando descanso... (Pomodoro ${this.pomodoroState.pomodoroCount})`);
+        // Determinar siguiente fase y preparar para iniciación manual
+        console.log(`🔄 Preparando descanso... (Pomodoro ${this.pomodoroState.pomodoroCount})`);
         if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
-            console.log('🔄 Iniciando descanso largo...');
-            this.startLongBreak();
+            console.log('🔄 Preparando descanso largo...');
+            this.prepareLongBreak();
         } else {
-            console.log('🔄 Iniciando descanso corto...');
-            this.startBreak();
+            console.log('🔄 Preparando descanso corto...');
+            this.prepareBreak();
         }
     }
 
@@ -2181,9 +2185,37 @@ class TaskQuestGame {
         // Mostrar notificación de fin de descanso
         this.showBreakEndNotification();
         
-        // Cambiar botón de pausa a iniciar
+        // Cambiar botón de pausa a iniciar y preparar para iniciación manual
         this.updatePomodoroButtons();
-        this.startWork();
+        this.prepareWork();
+    }
+
+    prepareWork() {
+        console.log('🚀 Preparando sesión de trabajo...');
+        this.pomodoroState.currentMode = 'work';
+        this.pomodoroState.timeLeft = this.data.pomodoro.settings.workDuration * 60;
+        this.pomodoroState.totalTime = this.data.pomodoro.settings.workDuration * 60;
+        this.pomodoroState.isRunning = false;
+        this.pomodoroState.isPaused = false;
+        this.pomodoroState.startTime = null;
+        this.pomodoroState.pausedTime = null;
+        this.pomodoroState.totalPausedTime = 0;
+        
+        // Limpiar cualquier intervalo existente
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        this.updatePomodoroDisplay();
+        this.updateTimerDisplay();
+        
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Sesión de trabajo preparada - Presiona "Iniciar" para comenzar');
     }
 
     startWork() {
@@ -2268,6 +2300,64 @@ class TaskQuestGame {
         this.updateTimerDisplay();
         
         this.showLongBreakNotification();
+    }
+
+    prepareBreak() {
+        console.log('☕ Preparando descanso corto...');
+        
+        // Limpiar el intervalo del timer ANTES de cambiar el estado
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Marcar como no corriendo para detener el tick
+        this.pomodoroState.isRunning = false;
+        
+        this.pomodoroState.currentMode = 'break';
+        this.pomodoroState.timeLeft = this.data.pomodoro.settings.breakDuration * 60;
+        this.pomodoroState.totalTime = this.data.pomodoro.settings.breakDuration * 60;
+        
+        // Actualizar botones para mostrar "Iniciar" en lugar de "Pausar"
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        this.updatePomodoroDisplay();
+        this.updateTimerDisplay();
+        
+        this.showBreakNotification();
+        console.log('✅ Descanso corto preparado - Presiona "Iniciar" para comenzar');
+    }
+
+    prepareLongBreak() {
+        console.log('🎉 Preparando descanso largo...');
+        
+        // Limpiar el intervalo del timer ANTES de cambiar el estado
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
+        // Marcar como no corriendo para detener el tick
+        this.pomodoroState.isRunning = false;
+        
+        this.pomodoroState.currentMode = 'longBreak';
+        this.pomodoroState.timeLeft = this.data.pomodoro.settings.longBreakDuration * 60;
+        this.pomodoroState.totalTime = this.data.pomodoro.settings.longBreakDuration * 60;
+        
+        // Actualizar botones para mostrar "Iniciar" en lugar de "Pausar"
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        this.updatePomodoroDisplay();
+        this.updateTimerDisplay();
+        
+        this.showLongBreakNotification();
+        console.log('✅ Descanso largo preparado - Presiona "Iniciar" para comenzar');
     }
 
     initializeTimerProgress() {
@@ -2723,9 +2813,27 @@ class TaskQuestGame {
     }
 
     playSound(soundName) {
-        // Crear un contexto de audio
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
+        try {
+            // Crear un contexto de audio
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Iniciar el contexto de audio si está suspendido (requerido por navegadores modernos)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('🔊 Contexto de audio iniciado');
+                    this.createSound(audioContext, soundName);
+                }).catch(error => {
+                    console.warn('❌ Error al iniciar contexto de audio:', error);
+                });
+            } else {
+                this.createSound(audioContext, soundName);
+            }
+        } catch (error) {
+            console.warn('❌ Error al crear contexto de audio:', error);
+        }
+    }
+
+    createSound(audioContext, soundName) {
         // Definir los sonidos disponibles
         const sounds = {
             bell: this.createBellSound,
@@ -4015,5 +4123,226 @@ function resetPomodoroGlobal() {
         window.game.resetPomodoro();
     } else {
         console.error('❌ window.game.resetPomodoro no disponible');
+    }
+}
+
+// ========== FUNCIONES DEBUG PARA 10 SEGUNDOS ==========
+
+// Función debug para probar ciclo de trabajo (10 segundos)
+function debugWork10s() {
+    if (window.game) {
+        console.log('🚀 Debug: Configurando ciclo de TRABAJO (10 segundos)...');
+        
+        // Configurar estado para trabajo
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.isRunning = false;
+        window.game.pomodoroState.isPaused = false;
+        window.game.pomodoroState.isCompleting = false;
+        window.game.pomodoroState.lastTickTime = Date.now();
+        
+        // Limpiar intervalos
+        if (window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        // Actualizar displays
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        // Mostrar botón iniciar
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Ciclo de TRABAJO configurado (10s)');
+        console.log('💡 Presiona "Iniciar" para comenzar el ciclo de trabajo');
+        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de descanso');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar ciclo de descanso corto (10 segundos)
+function debugBreak10s() {
+    if (window.game) {
+        console.log('☕ Debug: Configurando ciclo de DESCANSO CORTO (10 segundos)...');
+        
+        // Configurar estado para descanso corto
+        window.game.pomodoroState.currentMode = 'break';
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.isRunning = false;
+        window.game.pomodoroState.isPaused = false;
+        window.game.pomodoroState.isCompleting = false;
+        window.game.pomodoroState.lastTickTime = Date.now();
+        
+        // Limpiar intervalos
+        if (window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        // Actualizar displays
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        // Mostrar botón iniciar
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Ciclo de DESCANSO CORTO configurado (10s)');
+        console.log('💡 Presiona "Iniciar" para comenzar el descanso corto');
+        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de trabajo');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar ciclo de descanso largo (10 segundos)
+function debugLongBreak10s() {
+    if (window.game) {
+        console.log('🎉 Debug: Configurando ciclo de DESCANSO LARGO (10 segundos)...');
+        
+        // Configurar estado para descanso largo
+        window.game.pomodoroState.currentMode = 'longBreak';
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.isRunning = false;
+        window.game.pomodoroState.isPaused = false;
+        window.game.pomodoroState.isCompleting = false;
+        window.game.pomodoroState.lastTickTime = Date.now();
+        
+        // Limpiar intervalos
+        if (window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        // Actualizar displays
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        // Mostrar botón iniciar
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Ciclo de DESCANSO LARGO configurado (10s)');
+        console.log('💡 Presiona "Iniciar" para comenzar el descanso largo');
+        console.log('🎯 Al terminar: Notificación + Sonido + Preparación de trabajo');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar ciclo completo (trabajo → descanso → trabajo)
+function debugFullCycle10s() {
+    if (window.game) {
+        console.log('🔄 Debug: Configurando CICLO COMPLETO (10s cada fase)...');
+        
+        // Configurar estado inicial para trabajo
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.isRunning = false;
+        window.game.pomodoroState.isPaused = false;
+        window.game.pomodoroState.isCompleting = false;
+        window.game.pomodoroState.lastTickTime = Date.now();
+        window.game.pomodoroState.pomodoroCount = 0; // Resetear contador
+        
+        // Limpiar intervalos
+        if (window.game.pomodoroState.intervalId) {
+            clearInterval(window.game.pomodoroState.intervalId);
+            window.game.pomodoroState.intervalId = null;
+        }
+        
+        // Actualizar displays
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        // Mostrar botón iniciar
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ CICLO COMPLETO configurado (10s cada fase)');
+        console.log('💡 Presiona "Iniciar" para comenzar el ciclo completo');
+        console.log('🎯 Flujo: Trabajo (10s) → Descanso (10s) → Trabajo (10s)');
+        console.log('🔊 Cada transición incluye notificación y sonido');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar todas las notificaciones y sonidos
+function debugAllNotifications() {
+    if (window.game) {
+        console.log('🔔 Debug: Probando todas las notificaciones y sonidos...');
+        
+        // Probar notificación de finalización de trabajo
+        setTimeout(() => {
+            console.log('🎯 Probando notificación de finalización de trabajo...');
+            window.game.showPomodoroCelebration();
+        }, 1000);
+        
+        // Probar notificación de inicio de descanso corto
+        setTimeout(() => {
+            console.log('☕ Probando notificación de inicio de descanso corto...');
+            window.game.showBreakNotification();
+        }, 3000);
+        
+        // Probar notificación de inicio de descanso largo
+        setTimeout(() => {
+            console.log('🎉 Probando notificación de inicio de descanso largo...');
+            window.game.showLongBreakNotification();
+        }, 5000);
+        
+        // Probar notificación de fin de descanso
+        setTimeout(() => {
+            console.log('🚀 Probando notificación de fin de descanso...');
+            window.game.showBreakEndNotification();
+        }, 7000);
+        
+        console.log('✅ Todas las notificaciones serán probadas en secuencia');
+        console.log('🔊 Escucha los sonidos correspondientes a cada notificación');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para mostrar estado actual del pomodoro
+function debugPomodoroState() {
+    if (window.game && window.game.pomodoroState) {
+        console.log('📊 Debug: Estado actual del Pomodoro:');
+        console.log('🔄 Modo actual:', window.game.pomodoroState.currentMode);
+        console.log('⏱️ Tiempo restante:', window.game.pomodoroState.timeLeft, 'segundos');
+        console.log('⏱️ Tiempo total:', window.game.pomodoroState.totalTime, 'segundos');
+        console.log('▶️ Ejecutándose:', window.game.pomodoroState.isRunning);
+        console.log('⏸️ Pausado:', window.game.pomodoroState.isPaused);
+        console.log('🔄 Completando:', window.game.pomodoroState.isCompleting);
+        console.log('🍅 Pomodoros completados:', window.game.pomodoroState.pomodoroCount);
+        console.log('🆔 Interval ID:', window.game.pomodoroState.intervalId);
+        console.log('📅 Último tick:', new Date(window.game.pomodoroState.lastTickTime));
+        
+        // Mostrar configuración de sonidos
+        if (window.game.data.pomodoro.settings.soundNotifications) {
+            console.log('🔊 Configuración de sonidos:');
+            console.log('  - Habilitados:', window.game.data.pomodoro.settings.soundNotifications.enabled);
+            console.log('  - Sonido trabajo completo:', window.game.data.pomodoro.settings.soundNotifications.workCompleteSound);
+            console.log('  - Sonido inicio trabajo:', window.game.data.pomodoro.settings.soundNotifications.workStartSound);
+            console.log('  - Sonido inicio descanso:', window.game.data.pomodoro.settings.soundNotifications.breakStartSound);
+            console.log('  - Sonido fin descanso:', window.game.data.pomodoro.settings.soundNotifications.breakEndSound);
+            console.log('  - Sonido descanso largo:', window.game.data.pomodoro.settings.soundNotifications.longBreakStartSound);
+        }
+    } else {
+        console.error('❌ Game instance o pomodoroState not found');
     }
 }
