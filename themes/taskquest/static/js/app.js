@@ -23,6 +23,35 @@ class TaskQuestGame {
         this.updateHistoricalStats();
         this.updateDailyStats();
         this.showHistory('daily'); // Mostrar historial diario por defecto
+        
+        // Debug: Verificar que los elementos del pomodoro existan
+        this.debugPomodoroElements();
+    }
+    
+    debugPomodoroElements() {
+        console.log('🔍 Verificando elementos del Pomodoro:');
+        const elements = ['startBtn', 'pauseBtn', 'resetBtn', 'timerDisplay', 'timerPercentage', 'timerLabel'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            console.log(`${id}: ${element ? '✅ Encontrado' : '❌ No encontrado'}`);
+        });
+        
+        // Verificar estado del pomodoro
+        console.log('📊 Estado del Pomodoro:', this.pomodoroState);
+        
+        // Si hay problemas, intentar reinicializar
+        if (!this.pomodoroState) {
+            console.log('🔄 Reinicializando Pomodoro...');
+            this.initPomodoro();
+        }
+    }
+    
+    // Función para reinicializar el pomodoro si es necesario
+    reinitializePomodoro() {
+        console.log('🔄 Reinicializando sistema Pomodoro...');
+        this.initPomodoro();
+        this.updatePomodoroDisplay();
+        this.updatePomodoroStats();
     }
 
     loadData() {
@@ -1651,9 +1680,28 @@ class TaskQuestGame {
     }
 
     setupPomodoroEventListeners() {
-        document.getElementById('startBtn').addEventListener('click', () => this.startPomodoro());
-        document.getElementById('pauseBtn').addEventListener('click', () => this.pausePomodoro());
-        document.getElementById('resetBtn').addEventListener('click', () => this.resetPomodoro());
+        // Verificar que los elementos existan antes de agregar event listeners
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        if (startBtn) {
+            startBtn.addEventListener('click', () => this.startPomodoro());
+        } else {
+            console.error('startBtn not found');
+        }
+        
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => this.pausePomodoro());
+        } else {
+            console.error('pauseBtn not found');
+        }
+        
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this.resetPomodoro());
+        } else {
+            console.error('resetBtn not found');
+        }
         
         // Settings listeners
         document.getElementById('workDuration').addEventListener('change', (e) => {
@@ -1731,8 +1779,10 @@ class TaskQuestGame {
             this.pomodoroState.totalPausedTime = 0;
             this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
             
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('pauseBtn').style.display = 'block';
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            if (startBtn) startBtn.style.display = 'none';
+            if (pauseBtn) pauseBtn.style.display = 'block';
             
             this.updateTimerDisplay();
             this.savePomodoroState();
@@ -1745,8 +1795,10 @@ class TaskQuestGame {
         this.pomodoroState.pausedTime = Date.now();
         clearInterval(this.pomodoroState.intervalId);
         
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('pauseBtn').style.display = 'none';
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
         
         this.savePomodoroState();
     }
@@ -1764,8 +1816,10 @@ class TaskQuestGame {
         
         this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
         
-        document.getElementById('startBtn').style.display = 'none';
-        document.getElementById('pauseBtn').style.display = 'block';
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'none';
+        if (pauseBtn) pauseBtn.style.display = 'block';
         
         this.savePomodoroState();
     }
@@ -1782,8 +1836,10 @@ class TaskQuestGame {
         
         clearInterval(this.pomodoroState.intervalId);
         
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('pauseBtn').style.display = 'none';
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
         
         this.initializeTimerProgress();
         this.updateTimerDisplay();
@@ -1868,8 +1924,10 @@ class TaskQuestGame {
         this.updatePomodoroDisplay();
         this.updateTimerDisplay();
         
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('pauseBtn').style.display = 'none';
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
     }
 
     startBreak() {
@@ -1917,14 +1975,24 @@ class TaskQuestGame {
         const seconds = this.pomodoroState.timeLeft % 60;
         const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
-        document.getElementById('timerDisplay').textContent = timeString;
+        const timerDisplay = document.getElementById('timerDisplay');
+        if (timerDisplay) {
+            timerDisplay.textContent = timeString;
+        } else {
+            console.error('timerDisplay element not found');
+        }
         
         // Calcular progreso y porcentaje
         const progress = ((this.pomodoroState.totalTime - this.pomodoroState.timeLeft) / this.pomodoroState.totalTime) * 100;
         const percentage = Math.round(progress);
         
         // Actualizar porcentaje
-        document.getElementById('timerPercentage').textContent = `${percentage}%`;
+        const timerPercentage = document.getElementById('timerPercentage');
+        if (timerPercentage) {
+            timerPercentage.textContent = `${percentage}%`;
+        } else {
+            console.error('timerPercentage element not found');
+        }
         
         // Actualizar progreso circular con animación suave
         // Usar la circunferencia correcta para el radio de 110 (240px de diámetro)
@@ -1991,8 +2059,10 @@ class TaskQuestGame {
 
     updatePomodoroButtons() {
         // Cambiar botón de pausa a iniciar cuando termine un pomodoro o descanso
-        document.getElementById('startBtn').style.display = 'block';
-        document.getElementById('pauseBtn').style.display = 'none';
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (pauseBtn) pauseBtn.style.display = 'none';
     }
 
     // Configurar detección de visibilidad para manejar timer en background
@@ -3342,5 +3412,15 @@ function showHistoryMonth(year, month) {
     if (window.game) {
         const date = new Date(year, month - 1, 1);
         window.game.showHistory('monthly', date);
+    }
+}
+
+// Función global para reinicializar el pomodoro
+function fixPomodoro() {
+    if (window.game) {
+        window.game.reinitializePomodoro();
+        console.log('✅ Pomodoro reinicializado');
+    } else {
+        console.error('❌ Game instance not found');
     }
 }
