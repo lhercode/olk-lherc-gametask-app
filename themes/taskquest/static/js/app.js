@@ -1961,7 +1961,8 @@ class TaskQuestGame {
             this.pomodoroState.startTime = Date.now();
             this.pomodoroState.pausedTime = null;
             this.pomodoroState.totalPausedTime = 0;
-            this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
+            this.pomodoroState.lastTickTime = Date.now();
+            this.pomodoroState.intervalId = setInterval(() => this.tick(), 100); // Más frecuente para suavidad
             
             const startBtn = document.getElementById('startBtn');
             const pauseBtn = document.getElementById('pauseBtn');
@@ -1998,7 +1999,8 @@ class TaskQuestGame {
             this.pomodoroState.pausedTime = null;
         }
         
-        this.pomodoroState.intervalId = setInterval(() => this.tick(), 1000);
+        this.pomodoroState.lastTickTime = Date.now();
+        this.pomodoroState.intervalId = setInterval(() => this.tick(), 100); // Más frecuente para suavidad
         
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
@@ -2037,8 +2039,16 @@ class TaskQuestGame {
             return;
         }
         
-        if (this.pomodoroState.timeLeft > 0) {
-            this.pomodoroState.timeLeft--;
+        const now = Date.now();
+        const timeSinceLastTick = now - this.pomodoroState.lastTickTime;
+        
+        // Solo actualizar si ha pasado al menos 1 segundo
+        if (timeSinceLastTick >= 1000) {
+            const secondsPassed = Math.floor(timeSinceLastTick / 1000);
+            this.pomodoroState.timeLeft -= secondsPassed;
+            this.pomodoroState.lastTickTime = now;
+            
+            // Actualizar display siempre para suavidad visual
             this.updateTimerDisplay();
             
             // Guardar estado cada 10 segundos para persistencia
@@ -2046,6 +2056,15 @@ class TaskQuestGame {
                 this.savePomodoroState();
             }
         } else {
+            // Actualizar display para suavidad visual incluso si no ha pasado 1 segundo
+            this.updateTimerDisplay();
+        }
+        
+        // Verificar si el tiempo se agotó
+        if (this.pomodoroState.timeLeft <= 0) {
+            this.pomodoroState.timeLeft = 0;
+            this.updateTimerDisplay();
+            
             // Solo completar si no se está completando ya
             if (!this.pomodoroState.isCompleting) {
                 this.completePomodoroSession();
@@ -2214,8 +2233,10 @@ class TaskQuestGame {
     }
 
     updateTimerDisplay() {
-        const minutes = Math.floor(this.pomodoroState.timeLeft / 60);
-        const seconds = this.pomodoroState.timeLeft % 60;
+        // Calcular tiempo restante con precisión
+        const totalSeconds = Math.max(0, this.pomodoroState.timeLeft);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
         const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         const timerDisplay = document.getElementById('timerDisplay');
@@ -2348,10 +2369,13 @@ class TaskQuestGame {
 
         if (remainingTime <= 0) {
             // El pomodoro debería haber terminado
+            this.pomodoroState.timeLeft = 0;
+            this.updateTimerDisplay();
             this.completePomodoroSession();
         } else {
-            // Actualizar tiempo restante
+            // Actualizar tiempo restante y sincronizar lastTickTime
             this.pomodoroState.timeLeft = remainingTime;
+            this.pomodoroState.lastTickTime = now;
             this.updateTimerDisplay();
         }
     }
@@ -3809,11 +3833,33 @@ function debugPomodoroFlow() {
         window.game.pomodoroState.timeLeft = 10;
         window.game.pomodoroState.totalTime = 10;
         window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.lastTickTime = Date.now();
         window.game.updateTimerDisplay();
         window.game.updatePomodoroDisplay();
         
         console.log('✅ Timer establecido a 10 segundos para testing');
         console.log('📊 Estado actual:', window.game.pomodoroState);
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar countdown suave
+function debugSmoothCountdown() {
+    if (window.game) {
+        console.log('🔄 Iniciando debug de countdown suave...');
+        
+        // Establecer 30 segundos para testing
+        window.game.pomodoroState.timeLeft = 30;
+        window.game.pomodoroState.totalTime = 30;
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.lastTickTime = Date.now();
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        console.log('✅ Timer establecido a 30 segundos para testing de countdown suave');
+        console.log('📊 Estado actual:', window.game.pomodoroState);
+        console.log('💡 Usa startPomodoro() para iniciar el countdown suave');
     } else {
         console.error('❌ Game instance not found');
     }
