@@ -44,14 +44,88 @@ class TaskQuestGame {
             console.log('🔄 Reinicializando Pomodoro...');
             this.initPomodoro();
         }
+        
+        // Verificar que los event listeners estén funcionando
+        setTimeout(() => {
+            this.verifyPomodoroFunctionality();
+        }, 500);
     }
     
     // Función para reinicializar el pomodoro si es necesario
     reinitializePomodoro() {
         console.log('🔄 Reinicializando sistema Pomodoro...');
+        
+        // Limpiar intervalos existentes
+        if (this.pomodoroState && this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+        }
+        
+        // Reinicializar completamente
         this.initPomodoro();
         this.updatePomodoroDisplay();
         this.updatePomodoroStats();
+        
+        // Reconfigurar event listeners
+        this.attachPomodoroListeners();
+        
+        console.log('✅ Pomodoro reinicializado completamente');
+    }
+    
+    // Función para probar el pomodoro
+    testPomodoro() {
+        console.log('🧪 Probando funcionalidad del Pomodoro...');
+        
+        // Probar botones
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        if (startBtn) {
+            console.log('✅ startBtn encontrado');
+            startBtn.click();
+            setTimeout(() => {
+                if (pauseBtn) {
+                    console.log('✅ pauseBtn encontrado');
+                    pauseBtn.click();
+                    setTimeout(() => {
+                        if (resetBtn) {
+                            console.log('✅ resetBtn encontrado');
+                            resetBtn.click();
+                        }
+                    }, 1000);
+                }
+            }, 2000);
+        }
+    }
+    
+    // Verificar que la funcionalidad del pomodoro esté funcionando
+    verifyPomodoroFunctionality() {
+        console.log('🔍 Verificando funcionalidad del Pomodoro...');
+        
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        if (!startBtn || !pauseBtn || !resetBtn) {
+            console.error('❌ Botones del pomodoro no encontrados, reintentando...');
+            this.attachPomodoroListeners();
+            return;
+        }
+        
+        // Verificar que los event listeners estén funcionando
+        const hasStartListener = startBtn.onclick !== null || startBtn.addEventListener !== undefined;
+        const hasPauseListener = pauseBtn.onclick !== null || pauseBtn.addEventListener !== undefined;
+        const hasResetListener = resetBtn.onclick !== null || resetBtn.addEventListener !== undefined;
+        
+        console.log('📊 Estado de los listeners:');
+        console.log(`  startBtn: ${hasStartListener ? '✅' : '❌'}`);
+        console.log(`  pauseBtn: ${hasPauseListener ? '✅' : '❌'}`);
+        console.log(`  resetBtn: ${hasResetListener ? '✅' : '❌'}`);
+        
+        if (!hasStartListener || !hasPauseListener || !hasResetListener) {
+            console.log('🔄 Reconfigurando event listeners...');
+            this.attachPomodoroListeners();
+        }
     }
 
     loadData() {
@@ -96,6 +170,19 @@ class TaskQuestGame {
         const savedData = localStorage.getItem('taskQuestData');
         this.data = savedData ? JSON.parse(savedData) : defaultData;
 
+        // Asegurar que la estructura de taskHistory exista para datos existentes
+        if (!this.data.taskHistory) {
+            this.data.taskHistory = {
+                daily: {},
+                weekly: {},
+                monthly: {}
+            };
+            this.saveData();
+        }
+        
+        // Migrar datos existentes si es necesario
+        this.migrateExistingData();
+
         // Añadir tareas de ejemplo si es la primera vez
         if (!savedData) {
             this.addExampleTasks();
@@ -104,6 +191,39 @@ class TaskQuestGame {
 
     saveData() {
         localStorage.setItem('taskQuestData', JSON.stringify(this.data));
+    }
+    
+    // Migrar datos existentes para usuarios que ya tenían la app
+    migrateExistingData() {
+        // Verificar si necesitamos migrar datos
+        const needsMigration = !this.data.taskHistory || 
+                           Object.keys(this.data.taskHistory).length === 0;
+        
+        if (needsMigration) {
+            console.log('🔄 Migrando datos existentes...');
+            
+            // Inicializar estructura de historial
+            this.data.taskHistory = {
+                daily: {},
+                weekly: {},
+                monthly: {}
+            };
+            
+            // Si hay datos de pomodoro existentes, crear un historial básico
+            if (this.data.pomodoro && this.data.pomodoro.pomodorosToday > 0) {
+                const today = new Date();
+                const dateKey = this.getDateKey(today);
+                
+                this.data.taskHistory.daily[dateKey] = {
+                    tasks: [],
+                    timeBlocks: {}
+                };
+                
+                console.log('✅ Datos migrados correctamente');
+            }
+            
+            this.saveData();
+        }
     }
 
     // ========== HISTORIAL SYSTEM ==========
@@ -156,6 +276,15 @@ class TaskQuestGame {
     
     // Registrar tarea completada en el historial
     recordTaskCompletion(task, completionData) {
+        // Asegurar que taskHistory exista
+        if (!this.data.taskHistory) {
+            this.data.taskHistory = {
+                daily: {},
+                weekly: {},
+                monthly: {}
+            };
+        }
+        
         const now = new Date();
         const dateKey = this.getDateKey(now);
         const weekKey = this.getWeekKey(now);
@@ -252,6 +381,16 @@ class TaskQuestGame {
     
     // Obtener historial por período
     getHistoryByPeriod(period, date = new Date()) {
+        // Asegurar que taskHistory exista
+        if (!this.data.taskHistory) {
+            this.data.taskHistory = {
+                daily: {},
+                weekly: {},
+                monthly: {}
+            };
+            this.saveData();
+        }
+        
         let key, data;
         
         switch (period) {
@@ -1680,27 +1819,54 @@ class TaskQuestGame {
     }
 
     setupPomodoroEventListeners() {
+        // Esperar un poco para asegurar que el DOM esté listo
+        setTimeout(() => {
+            this.attachPomodoroListeners();
+        }, 100);
+    }
+    
+    attachPomodoroListeners() {
         // Verificar que los elementos existan antes de agregar event listeners
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         const resetBtn = document.getElementById('resetBtn');
         
+        console.log('🔗 Configurando event listeners del Pomodoro...');
+        
         if (startBtn) {
-            startBtn.addEventListener('click', () => this.startPomodoro());
+            // Remover listener anterior si existe
+            startBtn.removeEventListener('click', this.startPomodoro);
+            startBtn.addEventListener('click', () => {
+                console.log('▶️ Botón Iniciar presionado');
+                this.startPomodoro();
+            });
+            console.log('✅ startBtn listener configurado');
         } else {
-            console.error('startBtn not found');
+            console.error('❌ startBtn not found');
         }
         
         if (pauseBtn) {
-            pauseBtn.addEventListener('click', () => this.pausePomodoro());
+            // Remover listener anterior si existe
+            pauseBtn.removeEventListener('click', this.pausePomodoro);
+            pauseBtn.addEventListener('click', () => {
+                console.log('⏸️ Botón Pausar presionado');
+                this.pausePomodoro();
+            });
+            console.log('✅ pauseBtn listener configurado');
         } else {
-            console.error('pauseBtn not found');
+            console.error('❌ pauseBtn not found');
         }
         
         if (resetBtn) {
-            resetBtn.addEventListener('click', () => this.resetPomodoro());
+            // Remover listener anterior si existe
+            resetBtn.removeEventListener('click', this.resetPomodoro);
+            resetBtn.addEventListener('click', () => {
+                console.log('🔄 Botón Reiniciar presionado');
+                this.resetPomodoro();
+            });
+            console.log('✅ resetBtn listener configurado');
         } else {
-            console.error('resetBtn not found');
+            console.error('❌ resetBtn not found');
         }
         
         // Settings listeners
@@ -3422,5 +3588,87 @@ function fixPomodoro() {
         console.log('✅ Pomodoro reinicializado');
     } else {
         console.error('❌ Game instance not found');
+    }
+}
+
+// Función global para probar el pomodoro
+function testPomodoro() {
+    if (window.game) {
+        window.game.testPomodoro();
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función global para verificar el estado del pomodoro
+function checkPomodoro() {
+    if (window.game) {
+        window.game.debugPomodoroElements();
+        console.log('📊 Estado actual:', window.game.pomodoroState);
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función global para reparar datos corruptos
+function fixDataStructure() {
+    if (window.game) {
+        console.log('🔧 Reparando estructura de datos...');
+        
+        // Asegurar que todas las estructuras necesarias existan
+        if (!window.game.data.taskHistory) {
+            window.game.data.taskHistory = {
+                daily: {},
+                weekly: {},
+                monthly: {}
+            };
+        }
+        
+        if (!window.game.data.pomodoro) {
+            window.game.data.pomodoro = {
+                pomodorosToday: 0,
+                focusTimeToday: 0,
+                settings: {
+                    workDuration: 25,
+                    breakDuration: 5,
+                    longBreakDuration: 15,
+                    pomodorosUntilLongBreak: 4
+                }
+            };
+        }
+        
+        // Guardar datos reparados
+        window.game.saveData();
+        console.log('✅ Estructura de datos reparada');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Funciones globales de fallback para los botones del pomodoro
+function startPomodoroGlobal() {
+    console.log('▶️ startPomodoroGlobal() llamado');
+    if (window.game && window.game.startPomodoro) {
+        window.game.startPomodoro();
+    } else {
+        console.error('❌ window.game.startPomodoro no disponible');
+    }
+}
+
+function pausePomodoroGlobal() {
+    console.log('⏸️ pausePomodoroGlobal() llamado');
+    if (window.game && window.game.pausePomodoro) {
+        window.game.pausePomodoro();
+    } else {
+        console.error('❌ window.game.pausePomodoro no disponible');
+    }
+}
+
+function resetPomodoroGlobal() {
+    console.log('🔄 resetPomodoroGlobal() llamado');
+    if (window.game && window.game.resetPomodoro) {
+        window.game.resetPomodoro();
+    } else {
+        console.error('❌ window.game.resetPomodoro no disponible');
     }
 }
