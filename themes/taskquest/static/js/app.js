@@ -2080,11 +2080,18 @@ class TaskQuestGame {
         
         this.pomodoroState.isCompleting = true;
         
-        clearInterval(this.pomodoroState.intervalId);
+        // Limpiar completamente el intervalo
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
+        
         this.pomodoroState.isRunning = false;
         this.pomodoroState.startTime = null;
         this.pomodoroState.pausedTime = null;
         this.pomodoroState.totalPausedTime = 0;
+        
+        console.log('🛑 Pomodoro session completada, intervalo limpiado');
         
         if (this.pomodoroState.currentMode === 'work') {
             this.completeWorkSession();
@@ -2647,11 +2654,14 @@ class TaskQuestGame {
     // ========== SOUND NOTIFICATIONS ==========
     
     playNotificationSound(soundType) {
+        console.log(`🔊 Intentando reproducir sonido: ${soundType}`);
+        
         // Asegurar que la estructura de sonidos exista
         if (!this.data.pomodoro.settings.soundNotifications) {
             this.data.pomodoro.settings.soundNotifications = {
                 enabled: true,
                 workCompleteSound: 'bell',
+                workStartSound: 'bell',
                 breakStartSound: 'chime',
                 longBreakStartSound: 'gong'
             };
@@ -2660,17 +2670,24 @@ class TaskQuestGame {
         
         // Verificar si las notificaciones de sonido están habilitadas
         if (!this.data.pomodoro.settings.soundNotifications.enabled) {
+            console.log('🔇 Sonidos deshabilitados');
             return;
         }
 
         const soundName = this.data.pomodoro.settings.soundNotifications[soundType];
-        if (!soundName) return;
+        if (!soundName) {
+            console.log(`❌ Sonido no encontrado para tipo: ${soundType}`);
+            return;
+        }
+
+        console.log(`🎵 Reproduciendo sonido: ${soundName}`);
 
         // Crear y reproducir el sonido con manejo de errores
         try {
             this.playSound(soundName);
+            console.log(`✅ Sonido ${soundName} reproducido exitosamente`);
         } catch (error) {
-            console.warn('Error al reproducir sonido:', error);
+            console.warn('❌ Error al reproducir sonido:', error);
             // Continuar sin sonido si hay error
         }
     }
@@ -3915,6 +3932,27 @@ function debugFullCycle() {
         console.log('📊 Estado actual:', window.game.pomodoroState);
         console.log('💡 Usa startPomodoro() para iniciar el ciclo completo');
         console.log('🎯 Debería: Trabajo (10s) → Descanso (5s) → Trabajo (10s)');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar sonidos
+function debugSounds() {
+    if (window.game) {
+        console.log('🔊 Probando todos los sonidos...');
+        
+        // Probar cada tipo de sonido
+        const sounds = ['workCompleteSound', 'workStartSound', 'breakStartSound', 'longBreakStartSound'];
+        
+        sounds.forEach((sound, index) => {
+            setTimeout(() => {
+                console.log(`🎵 Probando sonido: ${sound}`);
+                window.game.playNotificationSound(sound);
+            }, index * 1000);
+        });
+        
+        console.log('✅ Todos los sonidos serán probados en secuencia');
     } else {
         console.error('❌ Game instance not found');
     }
