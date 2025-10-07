@@ -1800,6 +1800,17 @@ class TaskQuestGame {
             this.saveData();
         }
         
+        // Asegurar que la estructura de sonidos exista en datos existentes
+        if (!this.data.pomodoro.settings.soundNotifications) {
+            this.data.pomodoro.settings.soundNotifications = {
+                enabled: true,
+                workCompleteSound: 'bell',
+                breakStartSound: 'chime',
+                longBreakStartSound: 'gong'
+            };
+            this.saveData();
+        }
+        
         this.pomodoroState = {
             isRunning: false,
             isPaused: false,
@@ -2573,6 +2584,17 @@ class TaskQuestGame {
     // ========== SOUND NOTIFICATIONS ==========
     
     playNotificationSound(soundType) {
+        // Asegurar que la estructura de sonidos exista
+        if (!this.data.pomodoro.settings.soundNotifications) {
+            this.data.pomodoro.settings.soundNotifications = {
+                enabled: true,
+                workCompleteSound: 'bell',
+                breakStartSound: 'chime',
+                longBreakStartSound: 'gong'
+            };
+            this.saveData();
+        }
+        
         // Verificar si las notificaciones de sonido están habilitadas
         if (!this.data.pomodoro.settings.soundNotifications.enabled) {
             return;
@@ -2581,8 +2603,13 @@ class TaskQuestGame {
         const soundName = this.data.pomodoro.settings.soundNotifications[soundType];
         if (!soundName) return;
 
-        // Crear y reproducir el sonido
-        this.playSound(soundName);
+        // Crear y reproducir el sonido con manejo de errores
+        try {
+            this.playSound(soundName);
+        } catch (error) {
+            console.warn('Error al reproducir sonido:', error);
+            // Continuar sin sonido si hay error
+        }
     }
 
     playSound(soundName) {
@@ -3676,6 +3703,29 @@ function stopPomodoroLoop() {
         }
         
         console.log('✅ Bucles detenidos');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función global para reparar configuración de sonidos
+function fixSoundSettings() {
+    if (window.game) {
+        console.log('🔧 Reparando configuración de sonidos...');
+        
+        // Asegurar que la estructura de sonidos exista
+        if (!window.game.data.pomodoro.settings.soundNotifications) {
+            window.game.data.pomodoro.settings.soundNotifications = {
+                enabled: true,
+                workCompleteSound: 'bell',
+                breakStartSound: 'chime',
+                longBreakStartSound: 'gong'
+            };
+        }
+        
+        // Guardar datos reparados
+        window.game.saveData();
+        console.log('✅ Configuración de sonidos reparada');
     } else {
         console.error('❌ Game instance not found');
     }
