@@ -2101,6 +2101,7 @@ class TaskQuestGame {
         // Resetear flag después de un delay
         setTimeout(() => {
             this.pomodoroState.isCompleting = false;
+            console.log('🔄 Flag isCompleting reseteado, listo para nuevo ciclo');
         }, 2000);
     }
 
@@ -2151,6 +2152,8 @@ class TaskQuestGame {
     }
 
     completeBreakSession() {
+        console.log('☕ Completando sesión de descanso...');
+        
         // Incrementar contador específico de la tarea activa
         if (this.data.activeTask) {
             this.data.activeTask.breaksTaken++;
@@ -2159,15 +2162,30 @@ class TaskQuestGame {
         // Actualizar requisitos de tarea activa
         this.updateTaskRequirements();
         
+        // Mostrar notificación de fin de descanso
+        this.showBreakEndNotification();
+        
         // Cambiar botón de pausa a iniciar
         this.updatePomodoroButtons();
         this.startWork();
     }
 
     startWork() {
+        console.log('🚀 Iniciando sesión de trabajo...');
         this.pomodoroState.currentMode = 'work';
         this.pomodoroState.timeLeft = this.data.pomodoro.settings.workDuration * 60;
         this.pomodoroState.totalTime = this.data.pomodoro.settings.workDuration * 60;
+        this.pomodoroState.isRunning = false;
+        this.pomodoroState.isPaused = false;
+        this.pomodoroState.startTime = null;
+        this.pomodoroState.pausedTime = null;
+        this.pomodoroState.totalPausedTime = 0;
+        
+        // Limpiar cualquier intervalo existente
+        if (this.pomodoroState.intervalId) {
+            clearInterval(this.pomodoroState.intervalId);
+            this.pomodoroState.intervalId = null;
+        }
         
         this.updatePomodoroDisplay();
         this.updateTimerDisplay();
@@ -2176,6 +2194,8 @@ class TaskQuestGame {
         const pauseBtn = document.getElementById('pauseBtn');
         if (startBtn) startBtn.style.display = 'block';
         if (pauseBtn) pauseBtn.style.display = 'none';
+        
+        console.log('✅ Sesión de trabajo lista para iniciar');
     }
 
     startBreak() {
@@ -2576,6 +2596,13 @@ class TaskQuestGame {
         this.playNotificationSound('longBreakStartSound');
         
         this.showNotification('¡Descanso largo! 🎉 Tómate 15 minutos para recargar', 'info');
+    }
+
+    showBreakEndNotification() {
+        // Reproducir sonido de fin de descanso
+        this.playNotificationSound('workStartSound');
+        
+        this.showNotification('¡Descanso terminado! 🚀 Hora de volver al trabajo', 'success');
     }
 
     showNotification(message, type = 'info') {
@@ -3638,7 +3665,12 @@ function showHistoryTab(period) {
         
         // Actualizar botones de pestañas
         document.querySelectorAll('.history-tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`[onclick="showHistoryTab('${period}')"]`).classList.add('active');
+        const activeBtn = document.querySelector(`[onclick="showHistoryTab('${period}')"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        } else {
+            console.error(`Botón para periodo '${period}' no encontrado`);
+        }
     }
 }
 
@@ -3860,6 +3892,29 @@ function debugSmoothCountdown() {
         console.log('✅ Timer establecido a 30 segundos para testing de countdown suave');
         console.log('📊 Estado actual:', window.game.pomodoroState);
         console.log('💡 Usa startPomodoro() para iniciar el countdown suave');
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar ciclo completo (trabajo + descanso)
+function debugFullCycle() {
+    if (window.game) {
+        console.log('🔄 Iniciando debug de ciclo completo...');
+        
+        // Establecer 10 segundos para trabajo
+        window.game.pomodoroState.timeLeft = 10;
+        window.game.pomodoroState.totalTime = 10;
+        window.game.pomodoroState.currentMode = 'work';
+        window.game.pomodoroState.lastTickTime = Date.now();
+        window.game.pomodoroState.isCompleting = false;
+        window.game.updateTimerDisplay();
+        window.game.updatePomodoroDisplay();
+        
+        console.log('✅ Timer establecido a 10 segundos para testing de ciclo completo');
+        console.log('📊 Estado actual:', window.game.pomodoroState);
+        console.log('💡 Usa startPomodoro() para iniciar el ciclo completo');
+        console.log('🎯 Debería: Trabajo (10s) → Descanso (5s) → Trabajo (10s)');
     } else {
         console.error('❌ Game instance not found');
     }
