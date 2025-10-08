@@ -1,5 +1,36 @@
 # Changelog - TaskQuest
 
+## [2025.1.3] - 2025-12-19
+
+### 🔧 Fixed
+- **Validación Silenciosa**: Eliminadas las notificaciones de error cuando no hay tarea activa
+- **Comportamiento Silencioso**: El sistema ahora funciona silenciosamente sin mostrar alertas molestas
+
+### ✨ Added
+- **Validación Sin Notificaciones**: 
+  - `startWorkTimer()` ya no muestra notificaciones de error
+  - `resumePomodoro()` ya no muestra notificaciones de error
+  - El sistema simplemente no inicia si no hay tarea activa
+
+### 🔄 Changed
+- **Experiencia Silenciosa**: 
+  - Sin notificaciones de error para tareas activas faltantes
+  - Sin apertura automática del selector de tareas
+  - El sistema simplemente no responde si no hay tarea activa
+- **Logs de Consola**: Mantenidos los logs de consola para debugging
+
+### 🎯 Behavior Changes
+- **Sin Interrupciones**: No se muestran notificaciones molestas al usuario
+- **Funcionamiento Silencioso**: El sistema funciona en segundo plano sin alertas
+- **Validación Interna**: Las validaciones siguen funcionando pero de forma silenciosa
+
+### 🐛 Bug Fixes
+- Eliminadas las notificaciones de error innecesarias
+- Mejorada la experiencia de usuario al no mostrar alertas constantes
+- El sistema mantiene la funcionalidad pero de forma más discreta
+
+---
+
 ## [2025.1.2] - 2025-12-19
 
 ### 🔧 Fixed

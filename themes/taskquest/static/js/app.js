@@ -3,7 +3,7 @@
 class TaskQuestGame {
     constructor() {
         this.categories = ['comunicacion', 'estudiar', 'proyectos', 'personal'];
-        this.version = '2025.1.2'; // Versión que empieza con el año - Fix: Acumulación de pomodoros y detención completa
+        this.version = '2025.1.3'; // Versión que empieza con el año - Fix: Validación silenciosa sin notificaciones
         this.loadData();
         this.init();
         this.initPomodoro();
@@ -2099,22 +2099,18 @@ class TaskQuestGame {
     startWorkTimer() {
         console.log('🚀 Iniciando timer de trabajo...');
         
-        // Validar tarea activa solo para trabajo
+        // Validar tarea activa solo para trabajo (sin mostrar notificaciones)
         if (!this.data.activeTask) {
-            console.log('❌ No hay tarea activa seleccionada para trabajar');
-            this.showNotification('🎯 Necesitas seleccionar una tarea activa para trabajar', 'error');
-            this.showTaskSelector();
+            console.log('❌ No hay tarea activa seleccionada para trabajar - no iniciando');
             return;
         }
         
-        // Verificar que la tarea activa aún existe y no está completada
+        // Verificar que la tarea activa aún existe y no está completada (sin mostrar notificaciones)
         const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
         if (!currentTask || currentTask.completed) {
-            console.log('❌ La tarea activa ya no existe o está completada');
-            this.showNotification('❌ La tarea activa ya no está disponible. Selecciona una nueva tarea.', 'error');
+            console.log('❌ La tarea activa ya no existe o está completada - limpiando y no iniciando');
             this.data.activeTask = null;
             this.updateActiveTaskDisplay();
-            this.showTaskSelector();
             return;
         }
         
@@ -2195,7 +2191,7 @@ class TaskQuestGame {
                 console.log('🚀 Preparando primer ciclo de trabajo (tarea activa disponible)...');
                 this.prepareWork();
             } else {
-                // Si no hay tarea activa, preparar descanso por defecto
+                // Si no hay tarea activa, preparar descanso por defecto (sin notificaciones)
                 console.log('☕ No hay tarea activa, preparando descanso corto por defecto...');
                 this.prepareBreak();
             }
@@ -2264,24 +2260,20 @@ class TaskQuestGame {
     resumePomodoro() {
         console.log('🔄 Reanudando pomodoro...');
         
-        // Solo validar tarea activa si estamos en modo de trabajo
+        // Solo validar tarea activa si estamos en modo de trabajo (sin mostrar notificaciones)
         if (this.pomodoroState.currentMode === 'work') {
             // 🎯 VALIDACIÓN: Verificar que hay una tarea activa seleccionada para trabajo
             if (!this.data.activeTask) {
-                console.log('❌ No hay tarea activa seleccionada para reanudar trabajo');
-                this.showNotification('🎯 Necesitas seleccionar una tarea activa para trabajar', 'error');
-                this.showTaskSelector();
+                console.log('❌ No hay tarea activa seleccionada para reanudar trabajo - no reanudando');
                 return;
             }
             
             // Verificar que la tarea activa aún existe y no está completada
             const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
             if (!currentTask || currentTask.completed) {
-                console.log('❌ La tarea activa ya no existe o está completada');
-                this.showNotification('❌ La tarea activa ya no está disponible. Selecciona una nueva tarea.', 'error');
+                console.log('❌ La tarea activa ya no existe o está completada - limpiando y no reanudando');
                 this.data.activeTask = null;
                 this.updateActiveTaskDisplay();
-                this.showTaskSelector();
                 return;
             }
         }
