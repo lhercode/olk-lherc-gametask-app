@@ -12,6 +12,7 @@ class TaskQuestGame {
         this.displayVersion();
         this.initRestAlertSystem();
         this.initScrollSpy();
+        this.initPushNotifications();
     }
 
     init() {
@@ -1329,6 +1330,29 @@ class TaskQuestGame {
         }, 60000); // Cada minuto
     }
 
+    initPushNotifications() {
+        // Inicializar notificaciones push cuando el Service Worker esté listo
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(() => {
+                // Configurar notificaciones push
+                this.setupPushNotifications();
+                
+                // Configurar notificaciones de background
+                this.handleBackgroundNotifications();
+                
+                // Configurar notificaciones persistentes
+                this.setupPersistentNotifications();
+                
+                // Configurar notificaciones inteligentes
+                this.setupSmartNotifications();
+                
+                console.log('✅ Sistema de notificaciones push inicializado');
+            });
+        } else {
+            console.log('❌ Service Worker no soportado, notificaciones push deshabilitadas');
+        }
+    }
+
     updateRestAlert() {
         const now = new Date();
         const lastRest = this.data.restData.lastRestTime ? new Date(this.data.restData.lastRestTime) : null;
@@ -1963,11 +1987,37 @@ class TaskQuestGame {
     startPomodoro() {
         console.log('▶️ Iniciando pomodoro...');
         
+        // 🎯 VALIDACIÓN: Verificar que hay una tarea activa seleccionada
+        if (!this.data.activeTask) {
+            console.log('❌ No hay tarea activa seleccionada');
+            this.showNotification('🎯 Necesitas seleccionar una tarea activa primero', 'error');
+            this.showTaskSelector();
+            return;
+        }
+        
+        // Verificar que la tarea activa aún existe y no está completada
+        const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+        if (!currentTask || currentTask.completed) {
+            console.log('❌ La tarea activa ya no existe o está completada');
+            this.showNotification('❌ La tarea activa ya no está disponible. Selecciona una nueva tarea.', 'error');
+            this.data.activeTask = null;
+            this.updateActiveTaskDisplay();
+            this.showTaskSelector();
+            return;
+        }
+        
         if (this.pomodoroState.isPaused) {
             console.log('🔄 Reanudando pomodoro pausado...');
             this.resumePomodoro();
         } else {
+            // Verificar si necesitamos preparar un nuevo ciclo
+            if (this.pomodoroState.timeLeft <= 0 || this.pomodoroState.currentMode === 'idle') {
+                console.log('🔄 Preparando nuevo ciclo...');
+                this.prepareNextCycle();
+            }
+            
             console.log('🚀 Iniciando nuevo pomodoro...');
+            console.log(`🎯 Tarea activa: ${this.data.activeTask.name}`);
             
             // NO reproducir sonidos de inicio - solo al terminar ciclos
             console.log('🔇 Iniciando ciclo sin sonido - solo se reproduce sonido al terminar');
@@ -1990,6 +2040,41 @@ class TaskQuestGame {
             this.updateTimerDisplay();
             this.savePomodoroState();
         }
+    }
+
+    // Preparar el siguiente ciclo basado en el contexto actual
+    prepareNextCycle() {
+        console.log('🔄 Determinando siguiente ciclo...');
+        
+        // Si no hay modo actual o está en idle, empezar con trabajo
+        if (!this.pomodoroState.currentMode || this.pomodoroState.currentMode === 'idle') {
+            console.log('🚀 Preparando primer ciclo de trabajo...');
+            this.prepareWork();
+            return;
+        }
+        
+        // Si acabamos de completar trabajo, preparar descanso
+        if (this.pomodoroState.currentMode === 'work') {
+            if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
+                console.log('🎉 Preparando descanso largo...');
+                this.prepareLongBreak();
+            } else {
+                console.log('☕ Preparando descanso corto...');
+                this.prepareBreak();
+            }
+            return;
+        }
+        
+        // Si acabamos de completar descanso, preparar trabajo
+        if (this.pomodoroState.currentMode === 'break' || this.pomodoroState.currentMode === 'longBreak') {
+            console.log('🚀 Preparando siguiente ciclo de trabajo...');
+            this.prepareWork();
+            return;
+        }
+        
+        // Fallback: preparar trabajo
+        console.log('🚀 Fallback: Preparando ciclo de trabajo...');
+        this.prepareWork();
     }
 
     pausePomodoro() {
@@ -2018,6 +2103,25 @@ class TaskQuestGame {
     resumePomodoro() {
         console.log('🔄 Reanudando pomodoro...');
         
+        // 🎯 VALIDACIÓN: Verificar que hay una tarea activa seleccionada
+        if (!this.data.activeTask) {
+            console.log('❌ No hay tarea activa seleccionada para reanudar');
+            this.showNotification('🎯 Necesitas seleccionar una tarea activa primero', 'error');
+            this.showTaskSelector();
+            return;
+        }
+        
+        // Verificar que la tarea activa aún existe y no está completada
+        const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+        if (!currentTask || currentTask.completed) {
+            console.log('❌ La tarea activa ya no existe o está completada');
+            this.showNotification('❌ La tarea activa ya no está disponible. Selecciona una nueva tarea.', 'error');
+            this.data.activeTask = null;
+            this.updateActiveTaskDisplay();
+            this.showTaskSelector();
+            return;
+        }
+        
         this.pomodoroState.isRunning = true;
         this.pomodoroState.isPaused = false;
         
@@ -2039,6 +2143,7 @@ class TaskQuestGame {
         if (pauseBtn) pauseBtn.style.display = 'block';
         
         console.log('✅ Pomodoro reanudado - Botón cambiado a "Pausar"');
+        console.log(`🎯 Tarea activa: ${this.data.activeTask.name}`);
         this.savePomodoroState();
     }
 
@@ -2192,23 +2297,20 @@ class TaskQuestGame {
         // Mostrar celebración
         this.showPomodoroCelebration();
         
-        // Verificar si está en modo debug
-        if (this.pomodoroState.debugMode) {
-            console.log('🛑 MODO DEBUG: Ciclo de trabajo terminado - SE DETIENE COMPLETAMENTE');
-            console.log('✅ No se prepara el siguiente ciclo automáticamente');
-            this.pomodoroState.debugMode = false; // Resetear flag
-            return; // Salir sin preparar siguiente ciclo
-        }
+        // 🛑 DETENER COMPLETAMENTE - Requerir iniciación manual
+        console.log('🛑 Ciclo de trabajo terminado - SE DETIENE COMPLETAMENTE');
+        console.log('✅ No se prepara el siguiente ciclo automáticamente');
+        console.log('👆 El usuario debe iniciar manualmente el siguiente paso');
         
-        // Determinar siguiente fase y preparar para iniciación manual
-        console.log(`🔄 Preparando descanso... (Pomodoro ${this.pomodoroState.pomodoroCount})`);
-        if (this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0) {
-            console.log('🔄 Preparando descanso largo...');
-            this.prepareLongBreak();
-        } else {
-            console.log('🔄 Preparando descanso corto...');
-            this.prepareBreak();
-        }
+        // Cambiar botón a "Iniciar" para el siguiente paso
+        this.updatePomodoroButtons();
+        
+        // Mostrar mensaje informativo sobre el siguiente paso
+        const nextStep = this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0 
+            ? 'descanso largo' 
+            : 'descanso corto';
+        
+        this.showNotification(`🎉 ¡Trabajo completado! Presiona "Iniciar" para ${nextStep}`, 'success');
     }
 
     completeBreakSession() {
@@ -2238,18 +2340,16 @@ class TaskQuestGame {
             this.showBreakEndNotification();
         }
         
-        // Verificar si está en modo debug
-        if (this.pomodoroState.debugMode) {
-            console.log('🛑 MODO DEBUG: Ciclo de descanso terminado - SE DETIENE COMPLETAMENTE');
-            console.log('✅ No se prepara el siguiente ciclo automáticamente');
-            this.pomodoroState.debugMode = false; // Resetear flag
-            this.updatePomodoroButtons(); // Solo cambiar botón
-            return; // Salir sin preparar siguiente ciclo
-        }
+        // 🛑 DETENER COMPLETAMENTE - Requerir iniciación manual
+        console.log('🛑 Ciclo de descanso terminado - SE DETIENE COMPLETAMENTE');
+        console.log('✅ No se prepara el siguiente ciclo automáticamente');
+        console.log('👆 El usuario debe iniciar manualmente el siguiente paso');
         
-        // Cambiar botón de pausa a iniciar y preparar para iniciación manual
+        // Cambiar botón a "Iniciar" para el siguiente paso
         this.updatePomodoroButtons();
-        this.prepareWork();
+        
+        // Mostrar mensaje informativo sobre el siguiente paso
+        this.showNotification('🎉 ¡Descanso terminado! Presiona "Iniciar" para continuar trabajando', 'success');
     }
 
     prepareWork() {
@@ -2538,7 +2638,24 @@ class TaskQuestGame {
         // Cambiar botón de pausa a iniciar cuando termine un pomodoro o descanso
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
-        if (startBtn) startBtn.style.display = 'block';
+        
+        if (startBtn) {
+            startBtn.style.display = 'block';
+            
+            // Deshabilitar botón si no hay tarea activa
+            if (!this.data.activeTask) {
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.5';
+                startBtn.style.cursor = 'not-allowed';
+                startBtn.title = 'Selecciona una tarea activa primero';
+            } else {
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                startBtn.style.cursor = 'pointer';
+                startBtn.title = 'Iniciar Pomodoro';
+            }
+        }
+        
         if (pauseBtn) pauseBtn.style.display = 'none';
     }
 
@@ -2885,22 +3002,84 @@ class TaskQuestGame {
 
     playSound(soundName) {
         try {
-            // Crear un contexto de audio
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Verificar si ya tenemos un contexto de audio activo
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
             
             // Iniciar el contexto de audio si está suspendido (requerido por navegadores modernos)
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
                     console.log('🔊 Contexto de audio iniciado');
-                    this.createSound(audioContext, soundName);
+                    this.createSound(this.audioContext, soundName);
                 }).catch(error => {
                     console.warn('❌ Error al iniciar contexto de audio:', error);
+                    // Fallback: intentar crear un nuevo contexto
+                    this.createFallbackSound(soundName);
                 });
             } else {
-                this.createSound(audioContext, soundName);
+                this.createSound(this.audioContext, soundName);
             }
         } catch (error) {
             console.warn('❌ Error al crear contexto de audio:', error);
+            // Fallback: usar método alternativo
+            this.createFallbackSound(soundName);
+        }
+    }
+
+    // Método fallback para cuando Web Audio API no está disponible
+    createFallbackSound(soundName) {
+        try {
+            // Crear un elemento de audio temporal con data URI
+            const audioData = this.getSoundDataURI(soundName);
+            if (audioData) {
+                const audio = new Audio(audioData);
+                audio.volume = 0.3;
+                audio.play().catch(error => {
+                    console.warn('❌ Error al reproducir sonido fallback:', error);
+                });
+            }
+        } catch (error) {
+            console.warn('❌ Error en fallback de sonido:', error);
+        }
+    }
+
+    // Generar data URI para sonidos básicos
+    getSoundDataURI(soundName) {
+        // Sonidos básicos generados como ondas senoidales
+        const soundConfigs = {
+            bell: { frequency: 800, duration: 0.5, type: 'sine' },
+            chime: { frequency: 1000, duration: 0.3, type: 'sine' },
+            gong: { frequency: 200, duration: 1.0, type: 'sine' },
+            beep: { frequency: 600, duration: 0.2, type: 'square' },
+            ding: { frequency: 1200, duration: 0.4, type: 'sine' }
+        };
+
+        const config = soundConfigs[soundName];
+        if (!config) return null;
+
+        // Crear un contexto temporal para generar el sonido
+        try {
+            const tempContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = tempContext.createOscillator();
+            const gainNode = tempContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(tempContext.destination);
+            
+            oscillator.frequency.setValueAtTime(config.frequency, tempContext.currentTime);
+            oscillator.type = config.type;
+            
+            gainNode.gain.setValueAtTime(0.3, tempContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, tempContext.currentTime + config.duration);
+            
+            oscillator.start(tempContext.currentTime);
+            oscillator.stop(tempContext.currentTime + config.duration);
+            
+            return true; // Indica que el sonido se reprodujo exitosamente
+        } catch (error) {
+            console.warn('❌ Error al generar sonido fallback:', error);
+            return null;
         }
     }
 
@@ -3055,6 +3234,9 @@ class TaskQuestGame {
             // Remover clase visual del timer
             document.querySelector('.timer-display').classList.remove('with-active-task');
         }
+        
+        // Actualizar botones del Pomodoro basado en el estado de la tarea activa
+        this.updatePomodoroButtons();
     }
     
     showTaskSelector() {
@@ -3528,6 +3710,327 @@ class TaskQuestGame {
         }
         
         console.log(`📱 TaskQuest v${this.version} inicializado`);
+    }
+
+    // ========== PUSH NOTIFICATIONS & SERVICE WORKER INTEGRATION ==========
+
+    // Configurar notificaciones push
+    setupPushNotifications() {
+        console.log('🔔 Configurando notificaciones push...');
+        
+        // Verificar soporte
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('❌ Push notifications no soportadas en este navegador');
+            return;
+        }
+
+        // Configurar notificaciones para timers
+        this.setupTimerNotifications();
+        
+        // Configurar notificaciones para tareas
+        this.setupTaskNotifications();
+        
+        console.log('✅ Notificaciones push configuradas');
+    }
+
+    // Configurar notificaciones de timer
+    setupTimerNotifications() {
+        // Interceptar cuando se inicia un timer
+        const originalStartWork = this.startWork.bind(this);
+        this.startWork = () => {
+            originalStartWork();
+            this.notifyServiceWorker('START_TIMER', {
+                type: 'work',
+                duration: this.pomodoroState.totalTime,
+                startTime: Date.now()
+            });
+        };
+
+        const originalStartBreak = this.startBreak.bind(this);
+        this.startBreak = () => {
+            originalStartBreak();
+            this.notifyServiceWorker('START_TIMER', {
+                type: 'break',
+                duration: this.pomodoroState.totalTime,
+                startTime: Date.now()
+            });
+        };
+
+        const originalStartLongBreak = this.startLongBreak.bind(this);
+        this.startLongBreak = () => {
+            originalStartLongBreak();
+            this.notifyServiceWorker('START_TIMER', {
+                type: 'longBreak',
+                duration: this.pomodoroState.totalTime,
+                startTime: Date.now()
+            });
+        };
+
+        // Interceptar cuando se detiene un timer
+        const originalPausePomodoro = this.pausePomodoro.bind(this);
+        this.pausePomodoro = () => {
+            originalPausePomodoro();
+            this.notifyServiceWorker('STOP_TIMER');
+        };
+
+        const originalResetPomodoro = this.resetPomodoro.bind(this);
+        this.resetPomodoro = () => {
+            originalResetPomodoro();
+            this.notifyServiceWorker('STOP_TIMER');
+        };
+    }
+
+    // Configurar notificaciones de tareas
+    setupTaskNotifications() {
+        // Añadir recordatorios a tareas
+        this.setupTaskReminders();
+    }
+
+    // Configurar recordatorios de tareas
+    setupTaskReminders() {
+        // Interceptar cuando se añade una tarea
+        const originalAddTask = this.addTask.bind(this);
+        this.addTask = () => {
+            originalAddTask();
+            this.scheduleTaskReminders();
+        };
+    }
+
+    // Programar recordatorios de tareas
+    scheduleTaskReminders() {
+        if (!this.data.tasks) return;
+
+        const reminders = [];
+        
+        // Crear recordatorios para tareas no completadas
+        Object.keys(this.data.tasks).forEach(category => {
+            this.data.tasks[category].forEach(task => {
+                if (!task.completed) {
+                    // Recordatorio después de 2 horas de inactividad
+                    const reminderTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+                    reminders.push({
+                        id: `task-${task.id}`,
+                        taskName: task.name,
+                        category: category,
+                        time: reminderTime.toISOString(),
+                        sent: false
+                    });
+                }
+            });
+        });
+
+        // Guardar recordatorios
+        this.data.reminders = reminders;
+        this.saveData();
+    }
+
+    // Notificar al Service Worker
+    notifyServiceWorker(type, data = {}) {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: type,
+                ...data
+            });
+        }
+    }
+
+    // Sincronizar con Service Worker
+    syncWithServiceWorker() {
+        console.log('🔄 Sincronizando con Service Worker...');
+        
+        // Enviar estado actual del pomodoro
+        if (this.pomodoroState && this.pomodoroState.isRunning) {
+            this.notifyServiceWorker('START_TIMER', {
+                type: this.pomodoroState.currentMode,
+                duration: this.pomodoroState.totalTime,
+                startTime: this.pomodoroState.startTime,
+                timeLeft: this.pomodoroState.timeLeft
+            });
+        }
+
+        // Enviar recordatorios de tareas
+        if (this.data.reminders) {
+            this.notifyServiceWorker('UPDATE_REMINDERS', {
+                reminders: this.data.reminders
+            });
+        }
+    }
+
+    // Enviar notificación push personalizada
+    async sendPushNotification(title, body, options = {}) {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('❌ Push notifications no disponibles');
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            
+            await registration.showNotification(title, {
+                body: body,
+                icon: '/favicon.svg',
+                badge: '/favicon.svg',
+                tag: 'taskquest-notification',
+                requireInteraction: true,
+                ...options
+            });
+            
+            console.log('✅ Notificación push enviada:', title);
+        } catch (error) {
+            console.error('❌ Error al enviar notificación push:', error);
+        }
+    }
+
+    // Manejar notificaciones cuando la app está en background
+    handleBackgroundNotifications() {
+        // Escuchar mensajes del Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const { type, data } = event.data;
+                
+                switch (type) {
+                    case 'TIMER_COMPLETE':
+                        this.handleTimerCompleteFromBackground(data);
+                        break;
+                    case 'TASK_REMINDER':
+                        this.handleTaskReminderFromBackground(data);
+                        break;
+                }
+            });
+        }
+    }
+
+    // Manejar timer completado desde background
+    handleTimerCompleteFromBackground(data) {
+        console.log('🍅 Timer completado desde background:', data);
+        
+        // Actualizar estado local
+        if (this.pomodoroState) {
+            this.pomodoroState.isRunning = false;
+            this.pomodoroState.isCompleting = true;
+        }
+        
+        // Mostrar notificación local
+        const messages = {
+            'work': '¡Tiempo de trabajo terminado! Tómate un descanso.',
+            'break': '¡Hora de volver al trabajo!',
+            'longBreak': '¡Recargado y listo para continuar!'
+        };
+        
+        this.showNotification(messages[data.type] || 'Timer completado', 'success');
+        
+        // Reproducir sonido
+        this.playNotificationSound('workCompleteSound');
+    }
+
+    // Manejar recordatorio de tarea desde background
+    handleTaskReminderFromBackground(data) {
+        console.log('📝 Recordatorio de tarea desde background:', data);
+        
+        this.showNotification(`No olvides: ${data.taskName}`, 'info');
+    }
+
+    // Configurar notificaciones persistentes
+    setupPersistentNotifications() {
+        // Notificación cada 30 minutos si hay tareas pendientes
+        setInterval(() => {
+            const pendingTasks = this.getPendingTasksCount();
+            if (pendingTasks > 0) {
+                this.sendPushNotification(
+                    'TaskQuest - Tareas Pendientes',
+                    `Tienes ${pendingTasks} tareas pendientes. ¡Continúa con tu progreso!`,
+                    {
+                        tag: 'task-reminder',
+                        actions: [
+                            {
+                                action: 'open',
+                                title: 'Abrir TaskQuest'
+                            }
+                        ]
+                    }
+                );
+            }
+        }, 30 * 60 * 1000); // 30 minutos
+    }
+
+    // Obtener cantidad de tareas pendientes
+    getPendingTasksCount() {
+        if (!this.data.tasks) return 0;
+        
+        let count = 0;
+        Object.values(this.data.tasks).forEach(categoryTasks => {
+            count += categoryTasks.filter(task => !task.completed).length;
+        });
+        
+        return count;
+    }
+
+    // Configurar notificaciones inteligentes
+    setupSmartNotifications() {
+        // Notificación de motivación diaria
+        this.scheduleDailyMotivation();
+        
+        // Notificación de racha
+        this.scheduleStreakReminders();
+    }
+
+    // Programar motivación diaria
+    scheduleDailyMotivation() {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(9, 0, 0, 0); // 9:00 AM
+        
+        const timeUntilTomorrow = tomorrow.getTime() - now.getTime();
+        
+        setTimeout(() => {
+            this.sendPushNotification(
+                'TaskQuest - ¡Buenos días!',
+                '¡Es un nuevo día! ¿Listo para completar tus tareas?',
+                {
+                    tag: 'daily-motivation',
+                    actions: [
+                        {
+                            action: 'start',
+                            title: 'Comenzar día'
+                        }
+                    ]
+                }
+            );
+            
+            // Programar para el siguiente día
+            this.scheduleDailyMotivation();
+        }, timeUntilTomorrow);
+    }
+
+    // Programar recordatorios de racha
+    scheduleStreakReminders() {
+        // Si la racha está en riesgo (menos de 3 tareas completadas y es tarde)
+        const checkStreak = () => {
+            const now = new Date();
+            const hour = now.getHours();
+            const totalCompleted = Object.values(this.data.completedToday || {}).reduce((a, b) => a + b, 0);
+            
+            // Si es después de las 6 PM y no se han completado suficientes tareas
+            if (hour >= 18 && totalCompleted < 3) {
+                this.sendPushNotification(
+                    'TaskQuest - ¡Mantén tu racha!',
+                    `Solo has completado ${totalCompleted} tareas hoy. ¡Completa al menos 3 para mantener tu racha!`,
+                    {
+                        tag: 'streak-reminder',
+                        actions: [
+                            {
+                                action: 'complete',
+                                title: 'Completar tareas'
+                            }
+                        ]
+                    }
+                );
+            }
+        };
+        
+        // Verificar cada hora después de las 6 PM
+        setInterval(checkStreak, 60 * 60 * 1000);
     }
 }
 
@@ -4627,3 +5130,8 @@ function debugPomodoroState() {
         console.error('❌ Game instance o pomodoroState not found');
     }
 }
+
+// Inicializar el juego cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    window.game = new TaskQuestGame();
+});

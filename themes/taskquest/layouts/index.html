@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Site.Title }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ "favicon.svg" | relURL }}">
+    <link rel="manifest" href="{{ "manifest.json" | relURL }}">
     <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#6c63ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TaskQuest">
+    <meta name="msapplication-TileColor" content="#6c63ff">
+    <meta name="msapplication-tap-highlight" content="no">
 </head>
 <body>
     <div class="container">
@@ -681,5 +688,212 @@
     <script src="{{ "js/daily-system.js" | relURL }}"></script>
     <script src="{{ "js/app.js" | relURL }}"></script>
     <script src="{{ "js/debug.js" | relURL }}"></script>
+    
+    <!-- Service Worker y Notificaciones Push -->
+    <script>
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('✅ Service Worker registrado exitosamente:', registration);
+                    
+                    // Verificar si hay actualizaciones
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Nueva versión disponible
+                                if (confirm('¡Nueva versión de TaskQuest disponible! ¿Recargar para actualizar?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Error al registrar Service Worker:', error);
+                }
+            });
+        }
+
+        // Solicitar permisos de notificación
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log('❌ Este navegador no soporta notificaciones');
+                return false;
+            }
+
+            if (Notification.permission === 'granted') {
+                console.log('✅ Permisos de notificación ya concedidos');
+                return true;
+            }
+
+            if (Notification.permission !== 'denied') {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    console.log('✅ Permisos de notificación concedidos');
+                    return true;
+                }
+            }
+
+            console.log('❌ Permisos de notificación denegados');
+            return false;
+        }
+
+        // Mostrar banner de instalación PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar banner de instalación
+            const installBanner = document.createElement('div');
+            installBanner.className = 'install-banner';
+            installBanner.innerHTML = `
+                <div class="install-banner-content">
+                    <span class="install-icon">📱</span>
+                    <div class="install-text">
+                        <strong>Instalar TaskQuest</strong>
+                        <p>Para notificaciones incluso con el teléfono apagado</p>
+                    </div>
+                    <button class="install-btn" onclick="installPWA()">Instalar</button>
+                    <button class="install-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            // Añadir estilos
+            installBanner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #6c63ff, #4f46e5);
+                color: white;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 8px 32px rgba(108, 99, 255, 0.3);
+                z-index: 10000;
+                animation: slideUp 0.3s ease;
+            `;
+            
+            document.body.appendChild(installBanner);
+            
+            // Auto-ocultar después de 10 segundos
+            setTimeout(() => {
+                if (installBanner.parentNode) {
+                    installBanner.remove();
+                }
+            }, 10000);
+        });
+
+        // Función para instalar PWA
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`PWA instalación: ${outcome}`);
+                deferredPrompt = null;
+                
+                // Remover banner
+                const banner = document.querySelector('.install-banner');
+                if (banner) banner.remove();
+            }
+        }
+
+        // Inicializar notificaciones cuando la app esté lista
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Esperar a que el juego se inicialice
+            setTimeout(async () => {
+                if (window.game) {
+                    // Solicitar permisos de notificación
+                    const hasPermission = await requestNotificationPermission();
+                    
+                    if (hasPermission) {
+                        // Configurar notificaciones en el juego
+                        window.game.setupPushNotifications();
+                    }
+                }
+            }, 2000);
+        });
+
+        // Manejar notificaciones cuando la app vuelve a estar activa
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && window.game) {
+                // La app volvió a estar activa, sincronizar datos
+                window.game.syncWithServiceWorker();
+            }
+        });
+    </script>
+    
+    <style>
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .install-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .install-icon {
+            font-size: 24px;
+        }
+        
+        .install-text {
+            flex: 1;
+        }
+        
+        .install-text strong {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .install-text p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .install-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .install-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .install-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        
+        .install-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </body>
 </html>
