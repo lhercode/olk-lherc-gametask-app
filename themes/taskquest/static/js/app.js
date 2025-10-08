@@ -178,6 +178,9 @@ class TaskQuestGame {
 
         const savedData = localStorage.getItem('taskQuestData');
         this.data = savedData ? JSON.parse(savedData) : defaultData;
+        
+        console.log('📂 Datos cargados desde localStorage:', this.data);
+        console.log('🎯 Tarea activa cargada:', this.data.activeTask);
 
         // Asegurar que la estructura de taskHistory exista para datos existentes
         if (!this.data.taskHistory) {
@@ -1988,6 +1991,9 @@ class TaskQuestGame {
         console.log('▶️ Iniciando pomodoro...');
         
         // 🎯 VALIDACIÓN: Verificar que hay una tarea activa seleccionada
+        console.log('🔍 Debug - Estado de tarea activa:', this.data.activeTask);
+        console.log('🔍 Debug - Datos completos:', this.data);
+        
         if (!this.data.activeTask) {
             console.log('❌ No hay tarea activa seleccionada');
             this.showNotification('🎯 Necesitas seleccionar una tarea activa primero', 'error');
@@ -1997,6 +2003,10 @@ class TaskQuestGame {
         
         // Verificar que la tarea activa aún existe y no está completada
         const currentTask = this.data.tasks[this.data.activeTask.category].find(t => t.id === this.data.activeTask.id);
+        console.log('🔍 Debug - Tarea encontrada:', currentTask);
+        console.log('🔍 Debug - Categoría:', this.data.activeTask.category);
+        console.log('🔍 Debug - ID:', this.data.activeTask.id);
+        
         if (!currentTask || currentTask.completed) {
             console.log('❌ La tarea activa ya no existe o está completada');
             this.showNotification('❌ La tarea activa ya no está disponible. Selecciona una nueva tarea.', 'error');
@@ -2221,10 +2231,12 @@ class TaskQuestGame {
     completePomodoroSession() {
         // Prevenir ejecución múltiple
         if (this.pomodoroState.isCompleting) {
+            console.log('⚠️ Ya se está completando una sesión, ignorando...');
             return;
         }
         
         this.pomodoroState.isCompleting = true;
+        console.log('🛑 Iniciando finalización de sesión...');
         
         // Limpiar completamente el intervalo
         if (this.pomodoroState.intervalId) {
@@ -2241,14 +2253,16 @@ class TaskQuestGame {
         // Cambiar botón de pausar a iniciar inmediatamente
         this.updatePomodoroButtons();
         
-        console.log('🛑 Pomodoro session completada, timer detenido, botón cambiado a "Iniciar"');
+        console.log('🛑 Timer detenido completamente, botón cambiado a "Iniciar"');
         
+        // Ejecutar lógica específica según el modo actual
         if (this.pomodoroState.currentMode === 'work') {
             this.completeWorkSession();
-        } else {
+        } else if (this.pomodoroState.currentMode === 'break' || this.pomodoroState.currentMode === 'longBreak') {
             this.completeBreakSession();
         }
         
+        // Actualizar estadísticas globales
         this.updatePomodoroStats();
         this.updateDailyStats();
         this.updateGoalMultipliers();
@@ -2265,6 +2279,7 @@ class TaskQuestGame {
     completeWorkSession() {
         console.log('🍅 Completando sesión de trabajo...');
         
+        // Incrementar contadores (SOLO UNA VEZ)
         this.pomodoroState.pomodoroCount++;
         this.data.pomodoro.pomodorosToday++;
         this.data.pomodoro.focusTimeToday += this.data.pomodoro.settings.workDuration;
@@ -2297,13 +2312,13 @@ class TaskQuestGame {
         // Mostrar celebración
         this.showPomodoroCelebration();
         
+        // Reproducir sonido de trabajo completado
+        this.playNotificationSound('workCompleteSound');
+        
         // 🛑 DETENER COMPLETAMENTE - Requerir iniciación manual
         console.log('🛑 Ciclo de trabajo terminado - SE DETIENE COMPLETAMENTE');
         console.log('✅ No se prepara el siguiente ciclo automáticamente');
         console.log('👆 El usuario debe iniciar manualmente el siguiente paso');
-        
-        // Cambiar botón a "Iniciar" para el siguiente paso
-        this.updatePomodoroButtons();
         
         // Mostrar mensaje informativo sobre el siguiente paso
         const nextStep = this.pomodoroState.pomodoroCount % this.data.pomodoro.settings.pomodorosUntilLongBreak === 0 
@@ -2316,27 +2331,21 @@ class TaskQuestGame {
     completeBreakSession() {
         console.log('☕ Completando sesión de descanso...');
         
-        // Limpiar el intervalo del timer ANTES de cambiar el estado
-        if (this.pomodoroState.intervalId) {
-            clearInterval(this.pomodoroState.intervalId);
-            this.pomodoroState.intervalId = null;
-        }
-        
-        // Marcar como no corriendo para detener el tick
-        this.pomodoroState.isRunning = false;
-        
-        // Incrementar contador específico de la tarea activa
+        // Incrementar contador específico de la tarea activa (SOLO UNA VEZ)
         if (this.data.activeTask) {
             this.data.activeTask.breaksTaken++;
+            console.log(`🎯 Descansos en tarea activa: ${this.data.activeTask.breaksTaken}`);
         }
         
         // Actualizar requisitos de tarea activa
         this.updateTaskRequirements();
         
-        // Mostrar notificación de fin de descanso según el tipo
+        // Reproducir sonido según el tipo de descanso
         if (this.pomodoroState.currentMode === 'longBreak') {
+            this.playNotificationSound('longBreakEndSound');
             this.showLongBreakEndNotification();
         } else {
+            this.playNotificationSound('breakEndSound');
             this.showBreakEndNotification();
         }
         
@@ -2344,9 +2353,6 @@ class TaskQuestGame {
         console.log('🛑 Ciclo de descanso terminado - SE DETIENE COMPLETAMENTE');
         console.log('✅ No se prepara el siguiente ciclo automáticamente');
         console.log('👆 El usuario debe iniciar manualmente el siguiente paso');
-        
-        // Cambiar botón a "Iniciar" para el siguiente paso
-        this.updatePomodoroButtons();
         
         // Mostrar mensaje informativo sobre el siguiente paso
         this.showNotification('🎉 ¡Descanso terminado! Presiona "Iniciar" para continuar trabajando', 'success');
@@ -2635,28 +2641,44 @@ class TaskQuestGame {
     }
 
     updatePomodoroButtons() {
-        // Cambiar botón de pausa a iniciar cuando termine un pomodoro o descanso
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
         
-        if (startBtn) {
-            startBtn.style.display = 'block';
-            
-            // Deshabilitar botón si no hay tarea activa
-            if (!this.data.activeTask) {
-                startBtn.disabled = true;
-                startBtn.style.opacity = '0.5';
-                startBtn.style.cursor = 'not-allowed';
-                startBtn.title = 'Selecciona una tarea activa primero';
+        console.log('🔄 Actualizando botones del Pomodoro...');
+        console.log('📊 Estado actual:', {
+            isRunning: this.pomodoroState.isRunning,
+            isPaused: this.pomodoroState.isPaused,
+            isCompleting: this.pomodoroState.isCompleting,
+            hasActiveTask: !!this.data.activeTask
+        });
+        
+        if (startBtn && pauseBtn) {
+            if (this.pomodoroState.isRunning && !this.pomodoroState.isPaused) {
+                // Timer corriendo: mostrar botón Pausar
+                startBtn.style.display = 'none';
+                pauseBtn.style.display = 'block';
+                console.log('⏸️ Mostrando botón Pausar');
             } else {
-                startBtn.disabled = false;
-                startBtn.style.opacity = '1';
-                startBtn.style.cursor = 'pointer';
-                startBtn.title = 'Iniciar Pomodoro';
+                // Timer detenido o pausado: mostrar botón Iniciar
+                startBtn.style.display = 'block';
+                pauseBtn.style.display = 'none';
+                
+                // Deshabilitar botón si no hay tarea activa
+                if (!this.data.activeTask) {
+                    startBtn.disabled = true;
+                    startBtn.style.opacity = '0.5';
+                    startBtn.style.cursor = 'not-allowed';
+                    startBtn.title = 'Selecciona una tarea activa primero';
+                    console.log('❌ Botón Iniciar deshabilitado - sin tarea activa');
+                } else {
+                    startBtn.disabled = false;
+                    startBtn.style.opacity = '1';
+                    startBtn.style.cursor = 'pointer';
+                    startBtn.title = 'Iniciar Pomodoro';
+                    console.log('✅ Botón Iniciar habilitado - con tarea activa');
+                }
             }
         }
-        
-        if (pauseBtn) pauseBtn.style.display = 'none';
     }
 
     // Configurar detección de visibilidad para manejar timer en background
@@ -3392,6 +3414,10 @@ class TaskQuestGame {
 
     // Establecer nueva tarea activa (función auxiliar)
     setNewActiveTask(task, category, timeBlock) {
+        console.log('🎯 Estableciendo nueva tarea activa:', task.name);
+        console.log('🎯 Categoría:', category);
+        console.log('🎯 Bloque de tiempo:', timeBlock);
+        
         // Reiniciar contadores específicos de la tarea
         this.resetTaskCounters();
         
@@ -3407,7 +3433,11 @@ class TaskQuestGame {
             canComplete: false
         };
         
+        console.log('🎯 Tarea activa establecida:', this.data.activeTask);
+        
         this.saveData();
+        console.log('💾 Datos guardados en localStorage');
+        
         this.updateActiveTaskDisplay();
         this.closeTaskSelector();
         
@@ -5128,6 +5158,106 @@ function debugPomodoroState() {
         }
     } else {
         console.error('❌ Game instance o pomodoroState not found');
+    }
+}
+
+// Función debug para verificar estado de tarea activa
+function debugActiveTask() {
+    if (window.game) {
+        console.log('🎯 Debug: Estado de Tarea Activa:');
+        console.log('📋 Tarea activa:', window.game.data.activeTask);
+        
+        if (window.game.data.activeTask) {
+            console.log('✅ Hay tarea activa seleccionada');
+            console.log('📝 Nombre:', window.game.data.activeTask.name);
+            console.log('📂 Categoría:', window.game.data.activeTask.category);
+            console.log('🆔 ID:', window.game.data.activeTask.id);
+            console.log('🍅 Pomodoros completados:', window.game.data.activeTask.pomodorosCompleted);
+            console.log('☕ Descansos tomados:', window.game.data.activeTask.breaksTaken);
+            console.log('✅ Puede completarse:', window.game.data.activeTask.canComplete);
+            
+            // Verificar si la tarea aún existe
+            const currentTask = window.game.data.tasks[window.game.data.activeTask.category].find(t => t.id === window.game.data.activeTask.id);
+            if (currentTask) {
+                console.log('✅ La tarea existe en el sistema');
+                console.log('📋 Tarea encontrada:', currentTask);
+                console.log('✅ Completada:', currentTask.completed);
+            } else {
+                console.log('❌ La tarea NO existe en el sistema');
+                console.log('🔍 Tareas en categoría:', window.game.data.tasks[window.game.data.activeTask.category]);
+            }
+        } else {
+            console.log('❌ No hay tarea activa seleccionada');
+        }
+        
+        console.log('💾 Datos en localStorage:', localStorage.getItem('taskQuestData'));
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar flujo completo de tarea activa
+function debugActiveTaskFlow() {
+    if (window.game) {
+        console.log('🔄 Debug: Flujo completo de tarea activa');
+        
+        // 1. Verificar estado actual
+        debugActiveTask();
+        
+        // 2. Intentar iniciar pomodoro
+        console.log('▶️ Intentando iniciar pomodoro...');
+        window.game.startPomodoro();
+        
+        // 3. Mostrar estado después
+        setTimeout(() => {
+            console.log('📊 Estado después de intentar iniciar:');
+            debugActiveTask();
+        }, 1000);
+    } else {
+        console.error('❌ Game instance not found');
+    }
+}
+
+// Función debug para probar flujo completo de ciclos Pomodoro
+function debugPomodoroCycleFlow() {
+    if (window.game) {
+        console.log('🔄 Debug: Flujo completo de ciclos Pomodoro');
+        
+        // 1. Verificar estado actual
+        console.log('📊 Estado inicial del Pomodoro:');
+        debugPomodoroState();
+        
+        // 2. Verificar tarea activa
+        console.log('🎯 Estado de tarea activa:');
+        debugActiveTask();
+        
+        // 3. Verificar botones
+        console.log('🔘 Estado de botones:');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (startBtn && pauseBtn) {
+            console.log('  - Iniciar visible:', startBtn.style.display !== 'none');
+            console.log('  - Iniciar habilitado:', !startBtn.disabled);
+            console.log('  - Pausar visible:', pauseBtn.style.display !== 'none');
+        }
+        
+        // 4. Mostrar resumen
+        console.log('📋 Resumen del estado:');
+        console.log('  - Timer corriendo:', window.game.pomodoroState.isRunning);
+        console.log('  - Timer pausado:', window.game.pomodoroState.isPaused);
+        console.log('  - Completando:', window.game.pomodoroState.isCompleting);
+        console.log('  - Modo actual:', window.game.pomodoroState.currentMode);
+        console.log('  - Tiempo restante:', window.game.pomodoroState.timeLeft);
+        console.log('  - Tarea activa:', !!window.game.data.activeTask);
+        
+        console.log('💡 Comandos disponibles:');
+        console.log('  - startPomodoro() - Iniciar timer');
+        console.log('  - pausePomodoro() - Pausar timer');
+        console.log('  - resetPomodoro() - Reiniciar timer');
+        console.log('  - debugPomodoroState() - Ver estado detallado');
+        console.log('  - debugActiveTask() - Ver tarea activa');
+    } else {
+        console.error('❌ Game instance not found');
     }
 }
 
