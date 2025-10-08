@@ -1,7 +1,8 @@
 // Service Worker para TaskQuest - Notificaciones en Background
 // Permite que las notificaciones y sonidos funcionen incluso con el teléfono apagado
+// Optimizado para iPhone y dispositivos iOS
 
-const CACHE_NAME = 'taskquest-v1.0.0';
+const CACHE_NAME = 'taskquest-v1.0.0-ios';
 const urlsToCache = [
     '/',
     '/css/style.css',

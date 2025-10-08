@@ -10,10 +10,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <meta name="theme-color" content="#6c63ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TaskQuest">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="msapplication-TileColor" content="#6c63ff">
     <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Apple Touch Icons para iPhone -->
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="167x167" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="/favicon.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="/favicon.svg">
 </head>
 <body>
     <div class="container">
@@ -717,7 +727,7 @@
             });
         }
 
-        // Solicitar permisos de notificación
+        // Solicitar permisos de notificación (optimizado para iPhone)
         async function requestNotificationPermission() {
             if (!('Notification' in window)) {
                 console.log('❌ Este navegador no soporta notificaciones');
@@ -730,15 +740,78 @@
             }
 
             if (Notification.permission !== 'denied') {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    console.log('✅ Permisos de notificación concedidos');
-                    return true;
+                // En iPhone, es importante solicitar permisos después de una interacción del usuario
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        console.log('✅ Permisos de notificación concedidos');
+                        return true;
+                    } else if (permission === 'denied') {
+                        console.log('❌ Permisos de notificación denegados por el usuario');
+                        // Mostrar instrucciones para iPhone
+                        showIOSNotificationInstructions();
+                    }
+                } catch (error) {
+                    console.error('❌ Error al solicitar permisos:', error);
+                    showIOSNotificationInstructions();
                 }
             }
 
             console.log('❌ Permisos de notificación denegados');
             return false;
+        }
+
+        // Mostrar instrucciones específicas para iPhone
+        function showIOSNotificationInstructions() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS) {
+                const modal = document.createElement('div');
+                modal.className = 'modal ios-instructions-modal';
+                modal.innerHTML = `
+                    <div class="modal-content ios-instructions-content">
+                        <div class="ios-header">
+                            <span class="ios-icon">📱</span>
+                            <h2>Configurar Notificaciones en iPhone</h2>
+                        </div>
+                        <div class="ios-body">
+                            <p>Para recibir notificaciones de TaskQuest en tu iPhone:</p>
+                            <ol class="ios-steps">
+                                <li>Ve a <strong>Configuración</strong> → <strong>Notificaciones</strong></li>
+                                <li>Busca <strong>TaskQuest</strong> en la lista</li>
+                                <li>Activa <strong>Permitir notificaciones</strong></li>
+                                <li>Configura los tipos de notificaciones que deseas</li>
+                            </ol>
+                            <p class="ios-note">💡 Las notificaciones funcionarán incluso con el teléfono apagado una vez configuradas.</p>
+                        </div>
+                        <div class="ios-actions">
+                            <button class="ios-btn" onclick="this.parentElement.parentElement.parentElement.remove()">
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Añadir estilos
+                modal.style.cssText = `
+                    position: fixed;
+                    z-index: 10000;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    backdrop-filter: blur(8px);
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Auto-cerrar después de 15 segundos
+                setTimeout(() => {
+                    if (modal.parentNode) {
+                        modal.remove();
+                    }
+                }, 15000);
+            }
         }
 
         // Mostrar banner de instalación PWA
@@ -893,6 +966,89 @@
         
         .install-close:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Estilos para instrucciones de iPhone */
+        .ios-instructions-content {
+            background: var(--card-bg);
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .ios-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .ios-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 15px;
+        }
+        
+        .ios-header h2 {
+            font-size: 22px;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .ios-body {
+            margin-bottom: 25px;
+        }
+        
+        .ios-body p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+        
+        .ios-steps {
+            color: var(--text-primary);
+            padding-left: 20px;
+        }
+        
+        .ios-steps li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .ios-steps strong {
+            color: var(--primary);
+        }
+        
+        .ios-note {
+            background: var(--background-alt);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            font-style: italic;
+            margin-top: 20px;
+        }
+        
+        .ios-actions {
+            text-align: center;
+        }
+        
+        .ios-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .ios-btn:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
         }
     </style>
 </body>
