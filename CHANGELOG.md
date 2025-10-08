@@ -1,5 +1,36 @@
 # Changelog - TaskQuest
 
+## [2025.1.2] - 2025-12-19
+
+### 🔧 Fixed
+- **Acumulación de Pomodoros**: Corregido el problema donde el sistema acumulaba múltiples pomodoros/descansos sin detenerse
+- **Detención Completa**: Mejorada la lógica para asegurar que el timer se detiene completamente al terminar cada ciclo
+- **Prevención de Múltiples Inicios**: Agregadas validaciones para prevenir que se inicien múltiples timers simultáneamente
+
+### ✨ Added
+- **Validaciones de Estado**: 
+  - `startPomodoro()` ahora verifica si ya hay un timer corriendo
+  - `startTimer()` previene múltiples inicios simultáneos
+  - `tick()` se detiene automáticamente si el timer no está corriendo
+- **Limpieza de Intervalos**: Asegura que no hay intervalos previos antes de iniciar nuevos timers
+
+### 🔄 Changed
+- **Eliminado setTimeout**: Removido el delay de 2 segundos que causaba problemas de sincronización
+- **Reset Inmediato**: El flag `isCompleting` se resetea inmediatamente después de completar una sesión
+- **Validaciones Mejoradas**: Múltiples capas de validación para prevenir estados inconsistentes
+
+### 🎯 Behavior Changes
+- **Detención Inmediata**: Los ciclos se detienen completamente al terminar, sin acumulación
+- **Sin Múltiples Inicios**: No es posible iniciar múltiples timers simultáneamente
+- **Estado Consistente**: El sistema mantiene un estado consistente en todo momento
+
+### 🐛 Bug Fixes
+- Eliminada la acumulación de pomodoros/descansos cuando el usuario presiona "Iniciar" rápidamente
+- Corregido el problema donde el timer continuaba ejecutándose después de completar
+- Mejorada la sincronización entre el estado del timer y la interfaz de usuario
+
+---
+
 ## [2025.1.1] - 2025-12-19
 
 ### 🔧 Fixed

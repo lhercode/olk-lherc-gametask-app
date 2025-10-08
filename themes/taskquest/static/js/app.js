@@ -3,7 +3,7 @@
 class TaskQuestGame {
     constructor() {
         this.categories = ['comunicacion', 'estudiar', 'proyectos', 'personal'];
-        this.version = '2025.1.1'; // Versión que empieza con el año - Fix: Pomodoro loops y validaciones
+        this.version = '2025.1.2'; // Versión que empieza con el año - Fix: Acumulación de pomodoros y detención completa
         this.loadData();
         this.init();
         this.initPomodoro();
@@ -2054,11 +2054,23 @@ class TaskQuestGame {
 
     // Función común para iniciar el timer (sin validaciones)
     startTimer() {
+        // Prevenir inicio si ya hay un timer corriendo
+        if (this.pomodoroState.isRunning && !this.pomodoroState.isPaused) {
+            console.log('⚠️ Timer ya está corriendo, ignorando inicio...');
+            return;
+        }
+        
         if (this.pomodoroState.isPaused) {
             console.log('🔄 Reanudando pomodoro pausado...');
             this.resumePomodoro();
         } else {
             console.log('🚀 Iniciando timer...');
+            
+            // Asegurar que no hay intervalos previos
+            if (this.pomodoroState.intervalId) {
+                clearInterval(this.pomodoroState.intervalId);
+                this.pomodoroState.intervalId = null;
+            }
             
             // NO reproducir sonidos de inicio - solo al terminar ciclos
             console.log('🔇 Iniciando ciclo sin sonido - solo se reproduce sonido al terminar');
@@ -2132,6 +2144,18 @@ class TaskQuestGame {
     // Función principal que determina qué tipo de sesión iniciar
     startPomodoro() {
         console.log('▶️ Iniciando pomodoro...');
+        
+        // Prevenir inicio si ya hay un timer corriendo
+        if (this.pomodoroState.isRunning) {
+            console.log('⚠️ Timer ya está corriendo, ignorando inicio...');
+            return;
+        }
+        
+        // Prevenir inicio si se está completando una sesión
+        if (this.pomodoroState.isCompleting) {
+            console.log('⚠️ Se está completando una sesión, ignorando inicio...');
+            return;
+        }
         
         // Verificar si necesitamos preparar un nuevo ciclo
         if (this.pomodoroState.timeLeft <= 0 || this.pomodoroState.currentMode === 'idle') {
@@ -2319,6 +2343,16 @@ class TaskQuestGame {
             return;
         }
         
+        // Prevenir ejecución si el timer no está corriendo
+        if (!this.pomodoroState.isRunning) {
+            console.log('⚠️ Tick llamado pero timer no está corriendo, deteniendo...');
+            if (this.pomodoroState.intervalId) {
+                clearInterval(this.pomodoroState.intervalId);
+                this.pomodoroState.intervalId = null;
+            }
+            return;
+        }
+        
         const now = Date.now();
         const timeSinceLastTick = now - this.pomodoroState.lastTickTime;
         
@@ -2402,11 +2436,9 @@ class TaskQuestGame {
         this.saveData();
         this.savePomodoroState();
         
-        // Resetear flag después de un delay
-        setTimeout(() => {
-            this.pomodoroState.isCompleting = false;
-            console.log('🔄 Flag isCompleting reseteado, listo para nuevo ciclo');
-        }, 2000);
+        // Resetear flag inmediatamente - no necesitamos delay
+        this.pomodoroState.isCompleting = false;
+        console.log('🔄 Flag isCompleting reseteado inmediatamente, listo para nuevo ciclo');
     }
 
     completeWorkSession() {
